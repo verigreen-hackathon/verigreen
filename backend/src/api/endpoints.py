@@ -11,7 +11,7 @@ from utils.validation import (
 )
 from utils.database import store_claim, get_claim, get_all_claims
 from processing.claim_processor import ClaimProcessor, ProcessingResult
-from processing.global_ndvi_processor import global_ndvi_processor
+from processing.global_ndvi_processor import GlobalNDVIProcessor, GlobalNDVIResult, GlobalNDVITile
 from sentinel.batang_toru_mapper import get_claim_download_config
 from sentinel.grid import GlobalGridCalculator, GridError
 from datetime import datetime, timedelta
@@ -19,6 +19,8 @@ import uuid
 import logging
 import asyncio
 import time
+import math
+from typing import List, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -28,155 +30,77 @@ router = APIRouter()
 claim_processor = ClaimProcessor()
 global_grid_calculator = GlobalGridCalculator()
 
+# Initialize global NDVI processor (with Filecoin integration)
+global_ndvi_processor = GlobalNDVIProcessor(enable_filecoin=True)
+
 
 # ============================================================================
 # NEW GLOBAL FOREST MONITORING API
 # ============================================================================
 
 @router.post("/forest/analyze", response_model=GlobalForestResponse)
-async def analyze_global_forest(request: GlobalForestRequest):
+async def analyze_global_forest(request: GlobalForestRequest) -> GlobalForestResponse:
     """
-    NEW GLOBAL API: Analyze forest health for any global bounding box coordinates.
+    Analyze forest health for any global coordinates using 10x10 tile grid.
     
-    This endpoint accepts global coordinates and returns a 10x10 grid of forest tiles
-    with NDVI-based health scores, biome classification, and vegetation analysis.
+    This endpoint processes satellite data for the provided bounding box and returns
+    comprehensive forest health analysis with NDVI calculations, biome classification,
+    and cryptographic proof via Filecoin storage.
     
-    Args:
-        request: GlobalForestRequest with bounding_box and wallet_address
-        
-    Returns:
-        GlobalForestResponse with 100 forest tiles and comprehensive metadata
+    Returns 100 forest tiles in a 10x10 grid layout with health scores,
+    NDVI values, vegetation types, and permanently stored on Filecoin.
     """
-    start_time = time.time()
     analysis_id = str(uuid.uuid4())
     
     logger.info(f"🌍 Starting global forest analysis {analysis_id} for coordinates: {request.bounding_box}")
     
     try:
-        # Step 1: Validate global coordinates
-        is_valid, error_msg = global_grid_calculator.validate_global_coordinates(request.bounding_box)
-        if not is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid bounding box coordinates: {error_msg}"
-            )
-        
-        # Step 2: Process NDVI for global coordinates using the new processor
+        # Process global NDVI analysis with Filecoin integration
         logger.info(f"🧠 Processing global NDVI analysis for {analysis_id}")
         ndvi_result = await global_ndvi_processor.process_global_coordinates(
             bounding_box=request.bounding_box,
             analysis_id=analysis_id,
-            force_download=False  # Use cached data when available
+            force_download=False,
+            upload_to_filecoin=True
         )
         
-        # Step 3: Convert NDVI results to ForestTile format for API response
-        forest_grid = []
-        for ndvi_tile in ndvi_result.tiles:
+        # Convert tiles to simplified API format
+        forest_tiles = []
+        for i, tile in enumerate(ndvi_result.tiles):
+            # Extract grid coordinates from tile_id (assumes format like "tile_x_y")
+            grid_x = tile.grid_x
+            grid_y = tile.grid_y
+            
             forest_tile = ForestTile(
-                tile_id=ndvi_tile.tile_id,
-                coordinates=list(ndvi_tile.center_coordinates),  # [lat, lon]
-                health_score=ndvi_tile.health_score,
-                ndvi=ndvi_tile.mean_ndvi,
-                vegetation_type=ndvi_tile.vegetation_type,
-                last_updated=ndvi_tile.processed_at
+                tile_id=i,  # Sequential numeric ID (0-99)
+                x=grid_x,
+                y=grid_y,
+                health_score=round(tile.health_score, 3),
+                ndvi=round(tile.mean_ndvi, 3),
+                coordinates=[round(tile.center_coordinates[0], 6), round(tile.center_coordinates[1], 6)]  # [lat, lon]
             )
-            forest_grid.append(forest_tile)
+            forest_tiles.append(forest_tile)
         
-        # Step 4: Calculate area statistics
-        area_stats = global_grid_calculator.calculate_grid_area_km2(request.bounding_box)
-        
-        # Step 5: Calculate processing time
-        processing_time = time.time() - start_time
-        
-        # Create response
+        # Create simplified response
         response = GlobalForestResponse(
-            analysis_id=analysis_id,
-            status="completed",
-            forest_grid=forest_grid,
-            filecoin_cid=None,  # Will be populated when Filecoin integration is implemented
-            processing_time=round(processing_time, 3),
-            bounding_box=request.bounding_box,
-            wallet_address=request.wallet_address
+            forest_grid=forest_tiles,
+            filecoin_cid=ndvi_result.filecoin_cid,
+            processing_time=f"{ndvi_result.processing_time:.2f}s",
+            timestamp=ndvi_result.processed_at
         )
         
-        # Add comprehensive metadata with NDVI analysis results
-        response.metadata = {
-            "grid_size": f"{ndvi_result.grid_size}x{ndvi_result.grid_size}",
-            "total_tiles": len(forest_grid),
-            "coordinate_system": "WGS84",
-            "data_source": "Sentinel-2 L2A",
-            "api_version": "2.0.0",
-            
-            # Area statistics
-            "area_statistics": area_stats,
-            
-            # NDVI analysis results
-            "ndvi_analysis": {
-                "mean_ndvi_global": ndvi_result.mean_ndvi_global,
-                "mean_health_score": ndvi_result.mean_health_score,
-                "forest_coverage_percentage": ndvi_result.forest_coverage_percentage,
-                "total_area_analyzed_km2": ndvi_result.total_area_km2
-            },
-            
-            # Biome distribution
-            "biome_distribution": _calculate_biome_distribution(ndvi_result.tiles),
-            
-            # Processing information
-            "processing_details": {
-                "mgrs_tiles_used": ndvi_result.mgrs_tiles_used,
-                "sentinel_dates": ndvi_result.sentinel_dates,
-                "data_sources": ndvi_result.data_sources,
-                "processing_algorithm": "GlobalNDVIProcessor",
-                "seasonal_adjustments_applied": True,
-                "biome_classification_enabled": True
-            },
-            
-            # Quality metrics
-            "data_quality": {
-                "tiles_with_high_confidence": len([t for t in ndvi_result.tiles if t.valid_pixel_percentage > 90]),
-                "tiles_with_medium_confidence": len([t for t in ndvi_result.tiles if 70 <= t.valid_pixel_percentage <= 90]),
-                "tiles_with_low_confidence": len([t for t in ndvi_result.tiles if t.valid_pixel_percentage < 70]),
-                "average_pixel_validity": round(sum(t.valid_pixel_percentage for t in ndvi_result.tiles) / len(ndvi_result.tiles), 1)
-            },
-            
-            # Errors (if any)
-            "errors": ndvi_result.errors if ndvi_result.errors else None
-        }
-        
-        logger.info(f"✅ Completed global forest analysis {analysis_id} in {processing_time:.2f}s")
+        logger.info(f"✅ Completed global forest analysis {analysis_id} in {ndvi_result.processing_time:.2f}s")
         logger.info(f"📊 Results: {ndvi_result.mean_health_score:.3f} avg health, {ndvi_result.forest_coverage_percentage:.1f}% forest coverage")
+        if ndvi_result.filecoin_cid:
+            logger.info(f"🔗 Filecoin CID: {ndvi_result.filecoin_cid}")
         
         return response
         
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
     except Exception as e:
-        error_msg = f"Internal error processing global forest analysis: {str(e)}"
-        logger.error(f"❌ {error_msg}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=error_msg
-        )
-
-def _calculate_biome_distribution(tiles: list) -> dict:
-    """Calculate the distribution of biomes across all tiles."""
-    biome_counts = {}
-    for tile in tiles:
-        biome = tile.biome_classification
-        biome_counts[biome] = biome_counts.get(biome, 0) + 1
-    
-    total_tiles = len(tiles)
-    biome_percentages = {
-        biome: round((count / total_tiles) * 100, 1)
-        for biome, count in biome_counts.items()
-    }
-    
-    return {
-        "counts": biome_counts,
-        "percentages": biome_percentages,
-        "dominant_biome": max(biome_counts.items(), key=lambda x: x[1])[0] if biome_counts else "unknown"
-    }
+        logger.error(f"❌ Failed to process global forest analysis {analysis_id}: {str(e)}", exc_info=True)
+        
+        # Return error response with empty grid
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
 # ============================================================================

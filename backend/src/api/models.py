@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 import re
 from config import GRID_CONFIG
@@ -75,102 +75,92 @@ class LandClaimError(BaseModel):
 
 
 # ============================================================================
-# NEW GLOBAL FOREST MONITORING MODELS
+# SIMPLIFIED GLOBAL FOREST MONITORING MODELS
 # ============================================================================
 
 class GlobalForestRequest(BaseModel):
-    """Request model for global forest monitoring endpoint"""
+    """Request model for global forest analysis"""
     bounding_box: List[float] = Field(
-        ..., 
-        description="Bounding box coordinates as [west, south, east, north] in decimal degrees",
-        min_items=4,
-        max_items=4
+        description="Global coordinates [west, south, east, north] in decimal degrees",
+        example=[-60.0, -3.0, -59.5, -2.5]
     )
-    wallet_address: str = Field(..., description="Ethereum wallet address for data access")
-
+    wallet_address: str = Field(
+        description="User's wallet address for verification",
+        example="0x742d35Cc6634C0532925a3b8D364B4a456fA4D42"
+    )
+    
     @validator('bounding_box')
-    def validate_bounding_box(cls, v):
+    def validate_coordinates(cls, v):
         if len(v) != 4:
-            raise ValueError('Bounding box must contain exactly 4 coordinates: [west, south, east, north]')
+            raise ValueError('Bounding box must contain exactly 4 coordinates [west, south, east, north]')
         
         west, south, east, north = v
         
-        # Validate longitude ranges
-        if not (-180 <= west <= 180):
-            raise ValueError(f'West longitude must be between -180 and 180, got {west}')
-        if not (-180 <= east <= 180):
-            raise ValueError(f'East longitude must be between -180 and 180, got {east}')
+        # Validate longitude range
+        if not (-180 <= west <= 180) or not (-180 <= east <= 180):
+            raise ValueError('Longitude must be between -180 and 180 degrees')
         
-        # Validate latitude ranges
-        if not (-90 <= south <= 90):
-            raise ValueError(f'South latitude must be between -90 and 90, got {south}')
-        if not (-90 <= north <= 90):
-            raise ValueError(f'North latitude must be between -90 and 90, got {north}')
+        # Validate latitude range
+        if not (-90 <= south <= 90) or not (-90 <= north <= 90):
+            raise ValueError('Latitude must be between -90 and 90 degrees')
         
         # Validate bounding box logic
         if west >= east:
-            raise ValueError(f'West longitude ({west}) must be less than east longitude ({east})')
+            raise ValueError('West coordinate must be less than east coordinate')
         if south >= north:
-            raise ValueError(f'South latitude ({south}) must be less than north latitude ({north})')
-        
-        # Check for reasonable bounding box size (prevent extremely large requests)
-        lat_diff = north - south
-        lon_diff = east - west
-        if lat_diff > 10 or lon_diff > 10:
-            raise ValueError('Bounding box too large. Maximum allowed size is 10 degrees in any direction.')
+            raise ValueError('South coordinate must be less than north coordinate')
         
         return v
 
-    @validator('wallet_address')
-    def validate_wallet_address(cls, v):
-        # Basic Ethereum address validation
-        if not re.match(r'^0x[a-fA-F0-9]{40}$', v):
-            raise ValueError('Invalid Ethereum wallet address format')
-        return v.lower()  # Normalize to lowercase
-
 
 class ForestTile(BaseModel):
-    """Individual tile in the 10x10 forest grid"""
-    tile_id: str = Field(..., description="Unique identifier for this tile (e.g., 'tile_0_0')")
-    coordinates: List[float] = Field(
-        ..., 
-        description="Geographic coordinates of tile center [latitude, longitude]",
-        min_items=2,
-        max_items=2
+    """Individual forest tile in the 10x10 grid"""
+    tile_id: int = Field(description="Numeric tile identifier (0-99)")
+    x: int = Field(description="Grid X coordinate (0-9)", ge=0, le=9)
+    y: int = Field(description="Grid Y coordinate (0-9)", ge=0, le=9)
+    health_score: float = Field(
+        description="Normalized health score (0-1)",
+        example=0.85,
+        ge=0, le=1
     )
-    health_score: float = Field(..., description="Forest health score (0.0-1.0)", ge=0.0, le=1.0)
-    ndvi: float = Field(..., description="Normalized Difference Vegetation Index (-1.0 to 1.0)", ge=-1.0, le=1.0)
-    vegetation_type: str = Field(..., description="Type of vegetation detected")
-    last_updated: str = Field(..., description="Timestamp when this tile was last processed")
+    ndvi: float = Field(
+        description="Mean NDVI value (-1 to 1)",
+        example=0.78,
+        ge=-1, le=1
+    )
+    coordinates: List[float] = Field(
+        description="Center coordinates [lat, lon]",
+        example=[45.123, -122.456]
+    )
 
 
 class GlobalForestResponse(BaseModel):
-    """Response model for global forest monitoring analysis"""
-    analysis_id: str = Field(..., description="Unique identifier for this analysis")
-    status: str = Field(..., description="Analysis status")
+    """Simplified response model for global forest analysis"""
+    
     forest_grid: List[ForestTile] = Field(
-        ..., 
-        description="Array of 100 forest tiles (10x10 grid)",
+        description="Array of 100 forest tiles in 10x10 grid",
         min_items=100,
         max_items=100
     )
-    filecoin_cid: Optional[str] = Field(None, description="Filecoin Content Identifier for the processed data")
-    processing_time: float = Field(..., description="Processing time in seconds")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Analysis timestamp")
-    bounding_box: List[float] = Field(..., description="Original bounding box coordinates")
-    wallet_address: str = Field(..., description="Wallet address that requested the analysis")
     
-    # Metadata
-    metadata: dict = Field(default_factory=lambda: {
-        "grid_size": "10x10",
-        "total_tiles": 100,
-        "coordinate_system": "WGS84",
-        "data_source": "Sentinel-2",
-        "api_version": "2.0.0"
-    })
-
+    filecoin_cid: Optional[str] = Field(
+        description="Filecoin CID for permanent storage",
+        example="bafybeig...",
+        default=None
+    )
+    
+    processing_time: str = Field(
+        description="Processing time with units",
+        example="1.13s"
+    )
+    
+    timestamp: str = Field(
+        description="ISO timestamp of completion",
+        example="2025-05-31T19:43:44Z"
+    )
+    
     @validator('forest_grid')
     def validate_grid_size(cls, v):
         if len(v) != 100:
-            raise ValueError('Forest grid must contain exactly 100 tiles (10x10)')
+            raise ValueError('Forest grid must contain exactly 100 tiles')
         return v 

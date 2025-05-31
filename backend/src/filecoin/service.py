@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, Callable
 from dataclasses import dataclass, asdict
+import aiofiles
 
 from .client import (
     StorachaClient, 
@@ -299,7 +300,12 @@ class FilecoinService:
             # Stage 2: Upload to Storacha
             await self._track_upload_progress(filename, file_size, 'uploading', progress_callback)
             
-            upload_result = await self.client.upload_file(file_path)
+            # Read file data
+            async with aiofiles.open(file_path, 'rb') as f:
+                file_data = await f.read()
+            
+            # Upload data to Storacha
+            upload_result = await self.client.upload_data(file_data, filename)
             
             # Stage 3: Verify upload
             await self._track_upload_progress(filename, file_size, 'verifying', progress_callback)
@@ -318,7 +324,7 @@ class FilecoinService:
                 checksum_sha256=metadata["checksum_sha256"],
                 upload_timestamp=datetime.utcnow(),
                 content_cid=upload_result.content_cid,
-                shard_cids=upload_result.shard_cids,
+                shard_cids=[upload_result.shard_cid],
                 file_path=file_path,
                 tags=tags
             )
@@ -360,8 +366,8 @@ class FilecoinService:
         if not upload_result.content_cid:
             raise FilecoinValidationError("Upload result missing content CID")
         
-        if not upload_result.shard_cids:
-            raise FilecoinValidationError("Upload result missing shard CIDs")
+        if not upload_result.shard_cid:
+            raise FilecoinValidationError("Upload result missing shard CID")
         
         # Size validation (allowing for CAR overhead)
         original_size = file_metadata["file_size"]
@@ -377,7 +383,7 @@ class FilecoinService:
         
         logger.debug(
             f"Upload validation passed. CID: {upload_result.content_cid}, "
-            f"Shards: {len(upload_result.shard_cids)}"
+            f"Shard: {upload_result.shard_cid}"
         )
     
     async def get_file_info(self, content_cid: str) -> Optional[Dict[str, Any]]:

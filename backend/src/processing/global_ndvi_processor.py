@@ -5,10 +5,12 @@ Adapts existing NDVI calculation to work with global coordinates and 10x10 grids
 
 import logging
 import asyncio
+import json
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, NamedTuple
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import math
 
 import numpy as np
@@ -21,6 +23,7 @@ from sentinel.global_fetcher import GlobalSentinelFetcher
 from sentinel.grid import GlobalGridCalculator, GlobalTileCoordinates
 from ndvi.calculator import NDVICalculator, NDVIResult
 from ndvi.band_loader import BandData
+from filecoin.service import FilecoinService, create_config_from_env
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +81,9 @@ class GlobalNDVIResult:
     mgrs_tiles_used: List[str]
     sentinel_dates: Dict[str, str]
     errors: List[str]
+    
+    # Filecoin integration
+    filecoin_cid: Optional[str] = None
 
 
 class GlobalNDVIProcessor:
@@ -85,21 +91,31 @@ class GlobalNDVIProcessor:
     Processes NDVI for global coordinates using 10x10 grid system.
     """
     
-    def __init__(self):
+    def __init__(self, enable_filecoin: bool = True):
         """Initialize the global NDVI processor."""
         self.grid_calculator = GlobalGridCalculator()
         self.sentinel_fetcher = GlobalSentinelFetcher()
         self.ndvi_calculator = NDVICalculator()
+        self.enable_filecoin = enable_filecoin
+        
+        # Initialize Filecoin service if enabled
+        if self.enable_filecoin:
+            try:
+                self.filecoin_config = create_config_from_env()
+                logger.info("Filecoin integration enabled")
+            except Exception as e:
+                logger.warning(f"Filecoin config not available: {e}")
+                self.enable_filecoin = False
         
         # Global biome thresholds for different ecosystem types
         self.biome_thresholds = {
-            "tropical_rainforest": {"min_ndvi": 0.7, "health_threshold": 0.8},
-            "temperate_forest": {"min_ndvi": 0.6, "health_threshold": 0.7},
-            "boreal_forest": {"min_ndvi": 0.5, "health_threshold": 0.6},
-            "grassland": {"min_ndvi": 0.3, "health_threshold": 0.5},
-            "shrubland": {"min_ndvi": 0.2, "health_threshold": 0.4},
-            "desert": {"min_ndvi": 0.0, "health_threshold": 0.2},
-            "urban": {"min_ndvi": 0.1, "health_threshold": 0.3},
+            "tropical_rainforest": {"min_ndvi": 0.5, "health_threshold": 0.7},
+            "temperate_forest": {"min_ndvi": 0.4, "health_threshold": 0.6},
+            "boreal_forest": {"min_ndvi": 0.3, "health_threshold": 0.5},
+            "grassland": {"min_ndvi": 0.2, "health_threshold": 0.4},
+            "shrubland": {"min_ndvi": 0.1, "health_threshold": 0.3},
+            "desert": {"min_ndvi": 0.0, "health_threshold": 0.1},
+            "urban": {"min_ndvi": 0.1, "health_threshold": 0.2},
             "water": {"min_ndvi": -0.5, "health_threshold": 0.0},
             "snow_ice": {"min_ndvi": -0.2, "health_threshold": 0.0}
         }
@@ -110,7 +126,8 @@ class GlobalNDVIProcessor:
         self, 
         bounding_box: List[float],
         analysis_id: str,
-        force_download: bool = False
+        force_download: bool = False,
+        upload_to_filecoin: bool = True
     ) -> GlobalNDVIResult:
         """
         Process NDVI for global coordinates using 10x10 grid.
@@ -119,9 +136,10 @@ class GlobalNDVIProcessor:
             bounding_box: [west, south, east, north] in decimal degrees
             analysis_id: Unique identifier for this analysis
             force_download: Force new Sentinel-2 data download
+            upload_to_filecoin: Whether to upload results to Filecoin
             
         Returns:
-            GlobalNDVIResult with complete NDVI analysis
+            GlobalNDVIResult with complete NDVI analysis and Filecoin CID
         """
         start_time = datetime.now()
         logger.info(f"Starting global NDVI processing for analysis {analysis_id}")
@@ -166,7 +184,7 @@ class GlobalNDVIProcessor:
             # Calculate processing time
             processing_time = (datetime.now() - start_time).total_seconds()
             
-            # Create result
+            # Create result (without CID initially)
             result = GlobalNDVIResult(
                 analysis_id=analysis_id,
                 bounding_box=bounding_box,
@@ -181,8 +199,19 @@ class GlobalNDVIProcessor:
                 processed_at=datetime.now().isoformat(),
                 mgrs_tiles_used=sentinel_metadata.get('mgrs_tiles', []),
                 sentinel_dates=sentinel_metadata.get('tile_metadata', {}),
-                errors=[]
+                errors=[],
+                filecoin_cid=None
             )
+            
+            # Step 5: Upload to Filecoin if enabled
+            if upload_to_filecoin and self.enable_filecoin:
+                try:
+                    filecoin_cid = await self._upload_to_filecoin(result)
+                    result.filecoin_cid = filecoin_cid
+                    logger.info(f"Successfully uploaded analysis to Filecoin: {filecoin_cid}")
+                except Exception as e:
+                    logger.warning(f"Filecoin upload failed: {e}")
+                    result.errors.append(f"Filecoin upload failed: {str(e)}")
             
             logger.info(f"Completed global NDVI processing in {processing_time:.2f}s")
             return result
@@ -207,8 +236,108 @@ class GlobalNDVIProcessor:
                 processed_at=datetime.now().isoformat(),
                 mgrs_tiles_used=[],
                 sentinel_dates={},
-                errors=[error_msg]
+                errors=[error_msg],
+                filecoin_cid=None
             )
+    
+    async def _upload_to_filecoin(self, result: GlobalNDVIResult) -> str:
+        """
+        Upload NDVI analysis result to Filecoin and return CID.
+        
+        Args:
+            result: GlobalNDVIResult to upload
+            
+        Returns:
+            Filecoin CID of the uploaded data
+        """
+        logger.info(f"Uploading analysis {result.analysis_id} to Filecoin")
+        
+        # Convert result to JSON-serializable format
+        result_dict = self._prepare_filecoin_data(result)
+        
+        # Create temporary JSON file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
+            json.dump(result_dict, temp_file, indent=2, default=str)
+            temp_file_path = temp_file.name
+        
+        try:
+            # Upload to Filecoin
+            async with FilecoinService(self.filecoin_config) as service:
+                tags = {
+                    "project": "verigreen",
+                    "type": "global_ndvi_analysis",
+                    "analysis_id": result.analysis_id,
+                    "timestamp": result.processed_at,
+                    "biome_count": str(len(set(tile.biome_classification for tile in result.tiles)))
+                }
+                
+                metadata = await service.upload_file(
+                    file_path=temp_file_path,
+                    tags=tags
+                )
+                
+                return metadata.content_cid
+                
+        finally:
+            # Clean up temporary file
+            try:
+                Path(temp_file_path).unlink()
+            except Exception as e:
+                logger.warning(f"Failed to clean up temp file {temp_file_path}: {e}")
+    
+    def _prepare_filecoin_data(self, result: GlobalNDVIResult) -> Dict:
+        """
+        Prepare NDVI result data for Filecoin storage.
+        
+        Args:
+            result: GlobalNDVIResult to prepare
+            
+        Returns:
+            Dictionary ready for JSON serialization
+        """
+        # Convert dataclasses to dictionaries, handling special types
+        tiles_data = []
+        for tile in result.tiles:
+            tile_dict = asdict(tile)
+            # Convert BoundingBox to dictionary
+            if hasattr(tile.bounding_box, '_asdict'):
+                tile_dict['bounding_box'] = tile.bounding_box._asdict()
+            else:
+                tile_dict['bounding_box'] = {
+                    'left': tile.bounding_box.left,
+                    'bottom': tile.bounding_box.bottom,
+                    'right': tile.bounding_box.right,
+                    'top': tile.bounding_box.top
+                }
+            tiles_data.append(tile_dict)
+        
+        return {
+            "analysis_id": result.analysis_id,
+            "bounding_box": result.bounding_box,
+            "total_area_km2": result.total_area_km2,
+            "grid_size": result.grid_size,
+            "mean_ndvi_global": result.mean_ndvi_global,
+            "mean_health_score": result.mean_health_score,
+            "forest_coverage_percentage": result.forest_coverage_percentage,
+            "processing_time": result.processing_time,
+            "data_sources": result.data_sources,
+            "processed_at": result.processed_at,
+            "mgrs_tiles_used": result.mgrs_tiles_used,
+            "sentinel_dates": result.sentinel_dates,
+            "errors": result.errors,
+            "tiles": tiles_data,
+            "metadata": {
+                "version": "1.0",
+                "processor": "GlobalNDVIProcessor",
+                "tile_count": len(result.tiles),
+                "biome_types": list(set(tile.biome_classification for tile in result.tiles)),
+                "data_quality": {
+                    "high_confidence_tiles": len([t for t in result.tiles if t.valid_pixel_percentage > 90]),
+                    "medium_confidence_tiles": len([t for t in result.tiles if 70 <= t.valid_pixel_percentage <= 90]),
+                    "low_confidence_tiles": len([t for t in result.tiles if t.valid_pixel_percentage < 70])
+                }
+            }
+        }
     
     async def _process_grid_tiles(
         self,
