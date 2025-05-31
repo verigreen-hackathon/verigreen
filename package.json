@@ -10,5 +10,8 @@
     "dev": "yarn workspaces run dev",
     "build": "yarn workspaces run build",
     "test": "yarn workspaces run test"
+  },
+  "dependencies": {
+    "@pythnetwork/entropy-sdk-solidity": "^2.0.0"
   }
 }

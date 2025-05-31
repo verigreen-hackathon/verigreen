@@ -338,7 +338,7 @@
 
 "@img/sharp-libvips-linux-x64@1.1.0":
   version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@img/sharp-libvips-linux-x64/-/sharp-libvips-linux-x64-1.1.0.tgz#65b2b908bf47156b0724fde9095676c83a18cf5a"
+  resolved "https://registry.npmjs.org/@img/sharp-libvips-linux-x64/-/sharp-libvips-linux-x64-1.1.0.tgz"
   integrity sha512-yRj2+reB8iMg9W5sULM3S74jVS7zqSzHG3Ol/twnAAkAhnGQnpjj6e4ayUz7V+FpKypwgs82xbRdYtchTTUB+Q==
 
 "@img/sharp-libvips-linuxmusl-arm64@1.1.0":
@@ -348,7 +348,7 @@
 
 "@img/sharp-libvips-linuxmusl-x64@1.1.0":
   version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@img/sharp-libvips-linuxmusl-x64/-/sharp-libvips-linuxmusl-x64-1.1.0.tgz#1fa052737e203f46bf44192acd01f9faf11522d7"
+  resolved "https://registry.npmjs.org/@img/sharp-libvips-linuxmusl-x64/-/sharp-libvips-linuxmusl-x64-1.1.0.tgz"
   integrity sha512-wK7SBdwrAiycjXdkPnGCPLjYb9lD4l6Ze2gSdAGVZrEL05AOUJESWU2lhlC+Ffn5/G+VKuSm6zzbQSzFX/P65A==
 
 "@img/sharp-linux-arm64@0.34.1":
@@ -374,7 +374,7 @@
 
 "@img/sharp-linux-x64@0.34.1":
   version "0.34.1"
-  resolved "https://registry.yarnpkg.com/@img/sharp-linux-x64/-/sharp-linux-x64-0.34.1.tgz#3d8652efac635f0dba39d5e3b8b49515a2b2dee1"
+  resolved "https://registry.npmjs.org/@img/sharp-linux-x64/-/sharp-linux-x64-0.34.1.tgz"
   integrity sha512-wExv7SH9nmoBW3Wr2gvQopX1k8q2g5V5Iag8Zk6AVENsjwd+3adjwxtp3Dcu2QhOXr8W9NusBU6XcQUohBZ5MA==
   optionalDependencies:
     "@img/sharp-libvips-linux-x64" "1.1.0"
@@ -388,7 +388,7 @@
 
 "@img/sharp-linuxmusl-x64@0.34.1":
   version "0.34.1"
-  resolved "https://registry.yarnpkg.com/@img/sharp-linuxmusl-x64/-/sharp-linuxmusl-x64-0.34.1.tgz#a8dee4b6227f348c4bbacaa6ac3dc584a1a80391"
+  resolved "https://registry.npmjs.org/@img/sharp-linuxmusl-x64/-/sharp-linuxmusl-x64-0.34.1.tgz"
   integrity sha512-pax/kTR407vNb9qaSIiWVnQplPcGU8LRIJpDT5o8PdAx5aAA7AS3X9PS8Isw1/WfqgQorPotjrZL3Pqh6C5EBg==
   optionalDependencies:
     "@img/sharp-libvips-linuxmusl-x64" "1.1.0"
@@ -657,12 +657,12 @@
 
 "@next/env@15.3.1":
   version "15.3.1"
-  resolved "https://registry.yarnpkg.com/@next/env/-/env-15.3.1.tgz#fca98dcb90d92d555972cdbf03adf9aa982e2115"
+  resolved "https://registry.npmjs.org/@next/env/-/env-15.3.1.tgz"
   integrity sha512-cwK27QdzrMblHSn9DZRV+DQscHXRuJv6MydlJRpFSqJWZrTYMLzKDeyueJNN9MGd8NNiUKzDQADAf+dMLXX7YQ==
 
 "@next/env@15.3.3":
   version "15.3.3"
-  resolved "https://registry.yarnpkg.com/@next/env/-/env-15.3.3.tgz#8c5548756df93efff1bf4bb4e9e430a763978155"
+  resolved "https://registry.npmjs.org/@next/env/-/env-15.3.3.tgz"
   integrity sha512-OdiMrzCl2Xi0VTjiQQUK0Xh7bJHnOuET2s+3V+Y40WJBAXrJeGA3f+I8MZJ/YQ3mVGi5XGR1L66oFlgqXhQ4Vw==
 
 "@next/eslint-plugin-next@15.2.1":
@@ -674,7 +674,7 @@
 
 "@next/eslint-plugin-next@15.3.3":
   version "15.3.3"
-  resolved "https://registry.yarnpkg.com/@next/eslint-plugin-next/-/eslint-plugin-next-15.3.3.tgz#04a378b405f65f61165085f84971ccb4bbcf2f0a"
+  resolved "https://registry.npmjs.org/@next/eslint-plugin-next/-/eslint-plugin-next-15.3.3.tgz"
   integrity sha512-VKZJEiEdpKkfBmcokGjHu0vGDG+8CehGs90tBEy/IDoDDKGngeyIStt2MmE5FYNyU9BhgR7tybNWTAJY/30u+Q==
   dependencies:
     fast-glob "3.3.1"
@@ -721,22 +721,22 @@
 
 "@next/swc-linux-x64-gnu@15.3.1":
   version "15.3.1"
-  resolved "https://registry.yarnpkg.com/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-15.3.1.tgz#f90558d93bc25e01b0b271725e291863286753c4"
+  resolved "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-15.3.1.tgz"
   integrity sha512-bfI4AMhySJbyXQIKH5rmLJ5/BP7bPwuxauTvVEiJ/ADoddaA9fgyNNCcsbu9SlqfHDoZmfI6g2EjzLwbsVTr5A==
 
 "@next/swc-linux-x64-gnu@15.3.3":
   version "15.3.3"
-  resolved "https://registry.yarnpkg.com/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-15.3.3.tgz#4a19434545e5e752d9a3ed71f9b34982725f6293"
+  resolved "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-15.3.3.tgz"
   integrity sha512-jJ8HRiF3N8Zw6hGlytCj5BiHyG/K+fnTKVDEKvUCyiQ/0r5tgwO7OgaRiOjjRoIx2vwLR+Rz8hQoPrnmFbJdfw==
 
 "@next/swc-linux-x64-musl@15.3.1":
   version "15.3.1"
-  resolved "https://registry.yarnpkg.com/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-15.3.1.tgz#639f143bd0f3fd6e1bde4b383dc6cd8a8ff12628"
+  resolved "https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-15.3.1.tgz"
   integrity sha512-FeAbR7FYMWR+Z+M5iSGytVryKHiAsc0x3Nc3J+FD5NVbD5Mqz7fTSy8CYliXinn7T26nDMbpExRUI/4ekTvoiA==
 
 "@next/swc-linux-x64-musl@15.3.3":
   version "15.3.3"
-  resolved "https://registry.yarnpkg.com/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-15.3.3.tgz#41ab140dd0a04ab7291adbec5836c1ce251a588c"
+  resolved "https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-15.3.3.tgz"
   integrity sha512-HrUcTr4N+RgiiGn3jjeT6Oo208UT/7BuTr7K0mdKRBtTbT4v9zJqCDKO97DUqqoBK1qyzP1RwvrWTvU6EPh/Cw==
 
 "@next/swc-win32-arm64-msvc@15.3.1":
@@ -923,9 +923,14 @@
   resolved "https://registry.npmjs.org/@paulmillr/qr/-/qr-0.2.1.tgz"
   integrity sha512-IHnV6A+zxU7XwmKFinmYjUcwlyK9+xkG3/s9KcQhI9BjQKycrJ1JRO+FbNYPwZiPKW3je/DR0k7w8/gLa5eaxQ==
 
+"@pythnetwork/entropy-sdk-solidity@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.npmjs.org/@pythnetwork/entropy-sdk-solidity/-/entropy-sdk-solidity-2.0.0.tgz"
+  integrity sha512-VgxSax4e58skgffYrHkd6V0dSR8jxzpoY2ugLJJTxavyBYfPncrirwg+WzuknUa0bFmeCE3G335nWSZbJDOjVQ==
+
 "@reown/appkit-adapter-wagmi@^1.7.3":
   version "1.7.3"
-  resolved "https://registry.yarnpkg.com/@reown/appkit-adapter-wagmi/-/appkit-adapter-wagmi-1.7.3.tgz#824dafed9b23599a3e96ebcd0d1e44797d508016"
+  resolved "https://registry.npmjs.org/@reown/appkit-adapter-wagmi/-/appkit-adapter-wagmi-1.7.3.tgz"
   integrity sha512-4N8OjR2kf/OzAbAsau5GMhmqhBTqk/oZVzAtsN2NJIjH57itMk4JNfhcKsnhrOK6lqjrYraTFCWq6ptm2N31bQ==
   dependencies:
     "@reown/appkit" "1.7.3"
@@ -942,7 +947,7 @@
 
 "@reown/appkit-common@1.7.3":
   version "1.7.3"
-  resolved "https://registry.yarnpkg.com/@reown/appkit-common/-/appkit-common-1.7.3.tgz#f9bf6b3d128bf79c3cd2755581621c2306d80cb1"
+  resolved "https://registry.npmjs.org/@reown/appkit-common/-/appkit-common-1.7.3.tgz"
   integrity sha512-wKTr6N3z8ly17cc51xBEVkZK4zAd8J1m7RubgsdQ1olFY9YJGe61RYoNv9yFjt6tUVeYT+z7iMUwPhX2PziefQ==
   dependencies:
     big.js "6.2.2"
@@ -951,7 +956,7 @@
 
 "@reown/appkit-controllers@1.7.3":
   version "1.7.3"
-  resolved "https://registry.yarnpkg.com/@reown/appkit-controllers/-/appkit-controllers-1.7.3.tgz#9137763b7bb3a95baf41741863d1da92d4e3bd95"
+  resolved "https://registry.npmjs.org/@reown/appkit-controllers/-/appkit-controllers-1.7.3.tgz"
   integrity sha512-aqAcX/nZe0gwqjncyCkVrAk3lEw0qZ9xGrdLOmA207RreO4J0Vxu8OJXCBn4C2AUI2OpBxCPah+vyuKTUJTeHQ==
   dependencies:
     "@reown/appkit-common" "1.7.3"
@@ -962,14 +967,14 @@
 
 "@reown/appkit-polyfills@1.7.3":
   version "1.7.3"
-  resolved "https://registry.yarnpkg.com/@reown/appkit-polyfills/-/appkit-polyfills-1.7.3.tgz#21895ed9521edd81898b10de16505708b05463f2"
+  resolved "https://registry.npmjs.org/@reown/appkit-polyfills/-/appkit-polyfills-1.7.3.tgz"
   integrity sha512-vQUiAyI7WiNTUV4iNwv27iigdeg8JJTEo6ftUowIrKZ2/gtE2YdMtGpavuztT/qrXhrIlTjDGp5CIyv9WOTu4g==
   dependencies:
     buffer "6.0.3"
 
 "@reown/appkit-scaffold-ui@1.7.3":
   version "1.7.3"
-  resolved "https://registry.yarnpkg.com/@reown/appkit-scaffold-ui/-/appkit-scaffold-ui-1.7.3.tgz#ea966de3ab3f992c6a8ffa408eb53906a87986f6"
+  resolved "https://registry.npmjs.org/@reown/appkit-scaffold-ui/-/appkit-scaffold-ui-1.7.3.tgz"
   integrity sha512-ssB15fcjmoKQ+VfoCo7JIIK66a4SXFpCH8uK1CsMmXmKIKqPN54ohLo291fniV6mKtnJxh5Xm68slGtGrO3bmA==
   dependencies:
     "@reown/appkit-common" "1.7.3"
@@ -981,7 +986,7 @@
 
 "@reown/appkit-ui@1.7.3":
   version "1.7.3"
-  resolved "https://registry.yarnpkg.com/@reown/appkit-ui/-/appkit-ui-1.7.3.tgz#a51e7397922b4ace20e991e38989065f951c3d22"
+  resolved "https://registry.npmjs.org/@reown/appkit-ui/-/appkit-ui-1.7.3.tgz"
   integrity sha512-zKmFIjLp0X24pF9KtPtSHmdsh/RjEWIvz+faIbPGm4tQbwcxdg9A35HeoP0rMgKYx49SX51LgPwVXne2gYacqQ==
   dependencies:
     "@reown/appkit-common" "1.7.3"
@@ -992,7 +997,7 @@
 
 "@reown/appkit-utils@1.7.3":
   version "1.7.3"
-  resolved "https://registry.yarnpkg.com/@reown/appkit-utils/-/appkit-utils-1.7.3.tgz#65fbd8748cae8946e069907c3f893dc6cc97452a"
+  resolved "https://registry.npmjs.org/@reown/appkit-utils/-/appkit-utils-1.7.3.tgz"
   integrity sha512-8/MNhmfri+2uu8WzBhZ5jm5llofOIa1dyXDXRC/hfrmGmCFJdrQKPpuqOFYoimo2s2g70pK4PYefvOKgZOWzgg==
   dependencies:
     "@reown/appkit-common" "1.7.3"
@@ -1006,7 +1011,7 @@
 
 "@reown/appkit-wallet@1.7.3":
   version "1.7.3"
-  resolved "https://registry.yarnpkg.com/@reown/appkit-wallet/-/appkit-wallet-1.7.3.tgz#77730d4457302eca7c20d696926c670197d42551"
+  resolved "https://registry.npmjs.org/@reown/appkit-wallet/-/appkit-wallet-1.7.3.tgz"
   integrity sha512-D0pExd0QUE71ursQPp3pq/0iFrz2oz87tOyFifrPANvH5X0RQCYn/34/kXr+BFVQzNFfCBDlYP+CniNA/S0KiQ==
   dependencies:
     "@reown/appkit-common" "1.7.3"
@@ -1016,7 +1021,7 @@
 
 "@reown/appkit@1.7.3", "@reown/appkit@^1.7.3":
   version "1.7.3"
-  resolved "https://registry.yarnpkg.com/@reown/appkit/-/appkit-1.7.3.tgz#3d50f098ef305cf8ab59141e66ef47c316bb5f3a"
+  resolved "https://registry.npmjs.org/@reown/appkit/-/appkit-1.7.3.tgz"
   integrity sha512-aA/UIwi/dVzxEB62xlw3qxHa3RK1YcPMjNxoGj/fHNCqL2qWmbcOXT7coCUa9RG7/Bh26FZ3vdVT2v71j6hebQ==
   dependencies:
     "@reown/appkit-common" "1.7.3"
@@ -1252,12 +1257,12 @@
 
 "@tanstack/query-core@5.74.4":
   version "5.74.4"
-  resolved "https://registry.yarnpkg.com/@tanstack/query-core/-/query-core-5.74.4.tgz#08c4f88f336738d822d9242c5e7d2be50f5c25b3"
+  resolved "https://registry.npmjs.org/@tanstack/query-core/-/query-core-5.74.4.tgz"
   integrity sha512-YuG0A0+3i9b2Gfo9fkmNnkUWh5+5cFhWBN0pJAHkHilTx6A0nv8kepkk4T4GRt4e5ahbtFj2eTtkiPcVU1xO4A==
 
 "@tanstack/react-query@^5.74.4":
   version "5.74.4"
-  resolved "https://registry.yarnpkg.com/@tanstack/react-query/-/react-query-5.74.4.tgz#d73ee1899c08a227519cbf53b9a0e0b1e67cd3fe"
+  resolved "https://registry.npmjs.org/@tanstack/react-query/-/react-query-5.74.4.tgz"
   integrity sha512-mAbxw60d4ffQ4qmRYfkO1xzRBPUEf/72Dgo3qqea0J66nIKuDTLEqQt0ku++SDFlMGMnB6uKDnEG1xD/TDse4Q==
   dependencies:
     "@tanstack/query-core" "5.74.4"
@@ -1427,7 +1432,7 @@
 
 "@wagmi/connectors@5.7.12", "@wagmi/connectors@>=5.7.11":
   version "5.7.12"
-  resolved "https://registry.yarnpkg.com/@wagmi/connectors/-/connectors-5.7.12.tgz#3f96f8b12fa484723b56139cdf65520b878ef9c7"
+  resolved "https://registry.npmjs.org/@wagmi/connectors/-/connectors-5.7.12.tgz"
   integrity sha512-pLFuZ1PsLkNyY11mx0+IOrMM7xACWCBRxaulfX17osqixkDFeOAyqFGBjh/XxkvRyrDJUdO4F+QHEeSoOiPpgg==
   dependencies:
     "@coinbase/wallet-sdk" "4.3.0"
@@ -1439,7 +1444,7 @@
 
 "@wagmi/core@2.16.7":
   version "2.16.7"
-  resolved "https://registry.yarnpkg.com/@wagmi/core/-/core-2.16.7.tgz#9ca06583c7a546b25d86ec7ee4d4d1376b1ee6e2"
+  resolved "https://registry.npmjs.org/@wagmi/core/-/core-2.16.7.tgz"
   integrity sha512-Kpgrw6OXV0VBhDs4toQVKQ0NK5yUO6uxEqnvRGjNjbO85d93Gbfsp5BlxSLeWq6iVMSBFSitdl5i9W7b1miq1g==
   dependencies:
     eventemitter3 "5.0.1"
@@ -1448,7 +1453,7 @@
 
 "@walletconnect/core@2.19.2":
   version "2.19.2"
-  resolved "https://registry.yarnpkg.com/@walletconnect/core/-/core-2.19.2.tgz#4bf3918dd8041843a1b796e2c4e1f101363d72a4"
+  resolved "https://registry.npmjs.org/@walletconnect/core/-/core-2.19.2.tgz"
   integrity sha512-iu0mgLj51AXcKpdNj8+4EdNNBd/mkNjLEhZn6UMc/r7BM9WbmpPMEydA39WeRLbdLO4kbpmq4wTbiskI1rg+HA==
   dependencies:
     "@walletconnect/heartbeat" "1.2.2"
@@ -1478,7 +1483,7 @@
 
 "@walletconnect/ethereum-provider@2.19.2":
   version "2.19.2"
-  resolved "https://registry.yarnpkg.com/@walletconnect/ethereum-provider/-/ethereum-provider-2.19.2.tgz#898c85287b02cecbbfead12e0ee26f00e5a64d47"
+  resolved "https://registry.npmjs.org/@walletconnect/ethereum-provider/-/ethereum-provider-2.19.2.tgz"
   integrity sha512-NzPzNcjMLqow6ha2nssB1ciMD0cdHZesYcHSQKjCi9waIDMov9Fr2yEJccbiVFE3cxek7f9dCPsoZez2q8ihvg==
   dependencies:
     "@walletconnect/jsonrpc-http-connection" "1.0.8"
@@ -1625,7 +1630,7 @@
 
 "@walletconnect/sign-client@2.19.2":
   version "2.19.2"
-  resolved "https://registry.yarnpkg.com/@walletconnect/sign-client/-/sign-client-2.19.2.tgz#6b728fd8b1ebf8f47b231bedf56b725de660633d"
+  resolved "https://registry.npmjs.org/@walletconnect/sign-client/-/sign-client-2.19.2.tgz"
   integrity sha512-a/K5PRIFPCjfHq5xx3WYKHAAF8Ft2I1LtxloyibqiQOoUtNLfKgFB1r8sdMvXM7/PADNPe4iAw4uSE6PrARrfg==
   dependencies:
     "@walletconnect/core" "2.19.2"
@@ -1647,7 +1652,7 @@
 
 "@walletconnect/types@2.19.2":
   version "2.19.2"
-  resolved "https://registry.yarnpkg.com/@walletconnect/types/-/types-2.19.2.tgz#3518cffdd74a7d07a110c9da5da939c1b185e837"
+  resolved "https://registry.npmjs.org/@walletconnect/types/-/types-2.19.2.tgz"
   integrity sha512-/LZWhkVCUN+fcTgQUxArxhn2R8DF+LSd/6Wh9FnpjeK/Sdupx1EPS8okWG6WPAqq2f404PRoNAfQytQ82Xdl3g==
   dependencies:
     "@walletconnect/events" "1.0.1"
@@ -1659,7 +1664,7 @@
 
 "@walletconnect/universal-provider@2.19.2":
   version "2.19.2"
-  resolved "https://registry.yarnpkg.com/@walletconnect/universal-provider/-/universal-provider-2.19.2.tgz#a87d2c5da01a16ac8c107adcd27ee8c894e2331b"
+  resolved "https://registry.npmjs.org/@walletconnect/universal-provider/-/universal-provider-2.19.2.tgz"
   integrity sha512-LkKg+EjcSUpPUhhvRANgkjPL38wJPIWumAYD8OK/g4OFuJ4W3lS/XTCKthABQfFqmiNbNbVllmywiyE44KdpQg==
   dependencies:
     "@walletconnect/events" "1.0.1"
@@ -1677,7 +1682,7 @@
 
 "@walletconnect/utils@2.19.2":
   version "2.19.2"
-  resolved "https://registry.yarnpkg.com/@walletconnect/utils/-/utils-2.19.2.tgz#90259b69367e30ccd13cf8252547a6850ca5fb2e"
+  resolved "https://registry.npmjs.org/@walletconnect/utils/-/utils-2.19.2.tgz"
   integrity sha512-VU5CcUF4sZDg8a2/ov29OJzT3KfLuZqJUM0GemW30dlipI5fkpb0VPenZK7TcdLPXc1LN+Q+7eyTqHRoAu/BIA==
   dependencies:
     "@noble/ciphers" "1.2.1"
@@ -2302,7 +2307,7 @@ date-fns@^2.29.3:
 
 dayjs@1.11.13, dayjs@^1.11.13:
   version "1.11.13"
-  resolved "https://registry.yarnpkg.com/dayjs/-/dayjs-1.11.13.tgz#92430b0139055c3ebb60150aa13e860a4b5a366c"
+  resolved "https://registry.npmjs.org/dayjs/-/dayjs-1.11.13.tgz"
   integrity sha512-oaMBel6gjolK862uaPQOVTA7q3TZhuSvuMQAAglQDOWYO9A91IrAOUJEyKVlqJlHE0vq5p5UXxzdPfMH/x6xNg==
 
 debug@^3.2.7:
@@ -2615,7 +2620,7 @@ es-to-primitive@^1.3.0:
 
 es-toolkit@1.33.0:
   version "1.33.0"
-  resolved "https://registry.yarnpkg.com/es-toolkit/-/es-toolkit-1.33.0.tgz#bcc9d92ef2e1ed4618c00dd30dfda9faddf4a0b7"
+  resolved "https://registry.npmjs.org/es-toolkit/-/es-toolkit-1.33.0.tgz"
   integrity sha512-X13Q/ZSc+vsO1q600bvNK4bxgXMkHcf//RxCmYDaRY5DAcT+eoXjY5hoAPGMdRnWQjvyLEcyauG3b6hz76LNqg==
 
 esbuild@^0.19.0:
@@ -2670,7 +2675,7 @@ eslint-config-next@15.2.1:
 
 eslint-config-next@15.3.3:
   version "15.3.3"
-  resolved "https://registry.yarnpkg.com/eslint-config-next/-/eslint-config-next-15.3.3.tgz#356ca4b8647a6024c332260addcd261d3b4b6c6d"
+  resolved "https://registry.npmjs.org/eslint-config-next/-/eslint-config-next-15.3.3.tgz"
   integrity sha512-QJLv/Ouk2vZnxL4b67njJwTLjTf7uZRltI0LL4GERYR4qMF5z08+gxkfODAeaK7TiC6o+cER91bDaEnwrTWV6Q==
   dependencies:
     "@next/eslint-plugin-next" "15.3.3"
@@ -4071,7 +4076,7 @@ natural-compare@^1.4.0:
 
 next@15.3.3:
   version "15.3.3"
-  resolved "https://registry.yarnpkg.com/next/-/next-15.3.3.tgz#90ee73600af106796989136827a7a40f61dadd1f"
+  resolved "https://registry.npmjs.org/next/-/next-15.3.3.tgz"
   integrity sha512-JqNj29hHNmCLtNvd090SyRbXJiivQ+58XjCcrC50Crb5g5u2zi7Y2YivbsEfzk6AtVI80akdOQbaMZwWB1Hthw==
   dependencies:
     "@next/env" "15.3.3"
@@ -4094,7 +4099,7 @@ next@15.3.3:
 
 next@^15.3.1:
   version "15.3.1"
-  resolved "https://registry.yarnpkg.com/next/-/next-15.3.1.tgz#69cf2c124e504db64e14fc75eb29bd64c0c787a7"
+  resolved "https://registry.npmjs.org/next/-/next-15.3.1.tgz"
   integrity sha512-8+dDV0xNLOgHlyBxP1GwHGVaNXsmp+2NhZEYrXr24GWLHtt27YrBPbPuHvzlhi7kZNYjeJNR93IF5zfFu5UL0g==
   dependencies:
     "@next/env" "15.3.1"
@@ -4892,7 +4897,7 @@ sha.js@^2.4.11:
 
 sharp@^0.34.1:
   version "0.34.1"
-  resolved "https://registry.yarnpkg.com/sharp/-/sharp-0.34.1.tgz#e5922894b0cc7ddf159eeabc6d5668e4e8b11d61"
+  resolved "https://registry.npmjs.org/sharp/-/sharp-0.34.1.tgz"
   integrity sha512-1j0w61+eVxu7DawFJtnfYcvSv6qPFvfTaqzTQ2BLknVhHTwGS8sc63ZBF4rzkWMBVKybo4S5OBtDdZahh2A1xg==
   dependencies:
     color "^4.2.3"
@@ -5490,7 +5495,21 @@ viem@2.23.2:
     ox "0.6.7"
     ws "8.18.0"
 
-viem@2.x, viem@^2.1.1:
+viem@2.x, viem@>=2.23.11, viem@^2.27.2:
+  version "2.27.2"
+  resolved "https://registry.npmjs.org/viem/-/viem-2.27.2.tgz"
+  integrity sha512-VwsB+RswcflbwBNPMvzTHuafDA51iT8v4SuIFcudTP2skmxcdodbgoOLP4dYELVnCzcedxoSJDOeext4V3zdnA==
+  dependencies:
+    "@noble/curves" "1.8.1"
+    "@noble/hashes" "1.7.1"
+    "@scure/bip32" "1.6.2"
+    "@scure/bip39" "1.5.4"
+    abitype "1.0.8"
+    isows "1.0.6"
+    ox "0.6.9"
+    ws "8.18.1"
+
+viem@^2.1.1:
   version "2.23.9"
   resolved "https://registry.npmjs.org/viem/-/viem-2.23.9.tgz"
   integrity sha512-y8VLPfKukrstZKTerS9bm45ajZ22wUyStF+VquK3I2OovWLOyXSbQmJWei8syMFhp1uwhxh1tb0fAdx0WSRZWg==
@@ -5504,23 +5523,9 @@ viem@2.x, viem@^2.1.1:
     ox "0.6.9"
     ws "8.18.1"
 
-viem@>=2.23.11, viem@^2.27.2:
-  version "2.27.2"
-  resolved "https://registry.yarnpkg.com/viem/-/viem-2.27.2.tgz#226e89a09e7d89a230b0c99910040e75b1ffee8d"
-  integrity sha512-VwsB+RswcflbwBNPMvzTHuafDA51iT8v4SuIFcudTP2skmxcdodbgoOLP4dYELVnCzcedxoSJDOeext4V3zdnA==
-  dependencies:
-    "@noble/curves" "1.8.1"
-    "@noble/hashes" "1.7.1"
-    "@scure/bip32" "1.6.2"
-    "@scure/bip39" "1.5.4"
-    abitype "1.0.8"
-    isows "1.0.6"
-    ox "0.6.9"
-    ws "8.18.1"
-
 wagmi@^2.14.16:
   version "2.14.16"
-  resolved "https://registry.yarnpkg.com/wagmi/-/wagmi-2.14.16.tgz#ecbce1a7836ab2472894e57d1661d054568cd676"
+  resolved "https://registry.npmjs.org/wagmi/-/wagmi-2.14.16.tgz"
   integrity sha512-njOPvB8L0+jt3m1FTJiVF44T1u+kcjLtVWKvwI0mZnIesZTQZ/xDF0M/NHj3Uljyn3qJw3pyHjJe31NC+VVHMA==
   dependencies:
     "@wagmi/connectors" "5.7.12"
