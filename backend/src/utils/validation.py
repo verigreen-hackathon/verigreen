@@ -4,8 +4,8 @@ Validation utilities for land claims and grid operations.
 import math
 from typing import Tuple
 
-# Fixed import - using absolute path
-from backend.src.config import GRID_CONFIG, CLAIM_VALIDATION
+# Fixed import - using relative path
+from config import GRID_CONFIG, CLAIM_VALIDATION
 
 
 def grid_to_gps_coordinates(southwest_x: int, southwest_y: int, northeast_x: int, northeast_y: int) -> Tuple[float, float, float, float]:

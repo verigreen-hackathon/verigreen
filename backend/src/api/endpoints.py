@@ -12,6 +12,7 @@ from utils.validation import (
 from utils.database import store_claim, get_claim, get_all_claims
 from processing.claim_processor import ClaimProcessor, ProcessingResult
 from sentinel.batang_toru_mapper import get_claim_download_config
+from sentinel.grid import GlobalGridCalculator, GridError
 from datetime import datetime, timedelta
 import uuid
 import logging
@@ -22,8 +23,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Initialize the claim processor
+# Initialize the claim processor and global grid calculator
 claim_processor = ClaimProcessor()
+global_grid_calculator = GlobalGridCalculator()
 
 
 # ============================================================================
@@ -52,43 +54,65 @@ async def analyze_global_forest(request: GlobalForestRequest):
     try:
         logger.info(f"Starting global forest analysis {analysis_id} for bounding box {request.bounding_box}")
         
-        west, south, east, north = request.bounding_box
+        # Validate coordinates using our GlobalGridCalculator
+        is_valid, error_msg = global_grid_calculator.validate_global_coordinates(request.bounding_box)
+        if not is_valid:
+            logger.warning(f"Invalid coordinates for analysis {analysis_id}: {error_msg}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "invalid_coordinates",
+                    "message": error_msg,
+                    "analysis_id": analysis_id
+                }
+            )
         
-        # Log the coordinates for debugging
-        logger.info(f"Processing coordinates: West={west}, South={south}, East={east}, North={north}")
+        # Generate the 10x10 grid using GlobalGridCalculator
+        try:
+            global_tiles = global_grid_calculator.calculate_global_grid(request.bounding_box)
+        except GridError as e:
+            logger.error(f"Grid calculation failed for analysis {analysis_id}: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "grid_calculation_failed",
+                    "message": str(e),
+                    "analysis_id": analysis_id
+                }
+            )
         
-        # TODO: In the next subtasks, we'll implement the actual processing pipeline
-        # For now, we'll create a mock response to validate the API structure
+        # Calculate area statistics
+        area_stats = global_grid_calculator.calculate_grid_area_km2(request.bounding_box)
+        logger.info(f"Grid covers {area_stats['total_area_km2']} km² with {area_stats['tile_area_km2']} km² per tile")
         
-        # Generate mock 10x10 grid of forest tiles
+        # Convert GlobalTileCoordinates to ForestTile objects with mock NDVI data
+        # TODO: In the next subtasks, we'll replace this with real Sentinel-2 processing
         forest_grid = []
         
-        # Calculate grid cell size
-        lat_step = (north - south) / 10
-        lon_step = (east - west) / 10
-        
-        for y in range(10):
-            for x in range(10):
-                # Calculate center coordinates for this tile
-                tile_lon = west + (x * lon_step) + (lon_step / 2)
-                tile_lat = south + (y * lat_step) + (lat_step / 2)
-                
-                # Mock forest health calculation (will be replaced with real NDVI processing)
-                # For now, generate varied but realistic values
-                mock_ndvi = 0.3 + (0.4 * ((x + y) % 7) / 6)  # NDVI between 0.3-0.7
-                mock_health_score = min(1.0, max(0.0, mock_ndvi + 0.1))  # Health score 0.4-0.8
-                
-                tile = ForestTile(
-                    tile_id=f"tile_{x}_{y}",
-                    x=x,
-                    y=y,
-                    health_score=round(mock_health_score, 3),
-                    ndvi=round(mock_ndvi, 3),
-                    coordinates=[round(tile_lon, 6), round(tile_lat, 6)]
-                )
-                forest_grid.append(tile)
+        for global_tile in global_tiles:
+            # Mock forest health calculation (will be replaced with real NDVI processing)
+            # Generate varied but realistic values based on geographic position
+            mock_ndvi = 0.3 + (0.4 * ((global_tile.grid_x + global_tile.grid_y) % 7) / 6)  # NDVI between 0.3-0.7
+            mock_health_score = min(1.0, max(0.0, mock_ndvi + 0.1))  # Health score 0.4-0.8
+            
+            forest_tile = ForestTile(
+                tile_id=global_tile.tile_id,
+                x=global_tile.grid_x,
+                y=global_tile.grid_y,
+                health_score=round(mock_health_score, 3),
+                ndvi=round(mock_ndvi, 3),
+                coordinates=[
+                    round(global_tile.center_lat_lon[1], 6),  # longitude
+                    round(global_tile.center_lat_lon[0], 6)   # latitude
+                ]
+            )
+            forest_grid.append(forest_tile)
         
         processing_time = time.time() - start_time
+        
+        # Get estimated MGRS tiles for future Sentinel-2 integration
+        mgrs_tiles = global_grid_calculator.get_sentinel_mgrs_tiles(request.bounding_box)
+        logger.info(f"Analysis {analysis_id} would require MGRS tiles: {mgrs_tiles}")
         
         # Create response
         response = GlobalForestResponse(
@@ -100,6 +124,19 @@ async def analyze_global_forest(request: GlobalForestRequest):
             bounding_box=request.bounding_box,
             wallet_address=request.wallet_address
         )
+        
+        # Add area statistics and other metadata
+        response.metadata = {
+            "grid_size": "10x10",
+            "total_tiles": 100,
+            "coordinate_system": "WGS84",
+            "data_source": "Sentinel-2",
+            "api_version": "2.0.0",
+            "area_statistics": area_stats,
+            "estimated_mgrs_tiles": mgrs_tiles,
+            "grid_calculator": "GlobalGridCalculator",
+            "coordinate_validation": "passed"
+        }
         
         logger.info(f"Completed global forest analysis {analysis_id} in {processing_time:.3f} seconds")
         return response

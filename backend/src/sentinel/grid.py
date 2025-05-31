@@ -21,6 +21,16 @@ class TileCoordinates(NamedTuple):
     center_lat_lon: Tuple[float, float]  # (lat, lon) center point
 
 
+class GlobalTileCoordinates(NamedTuple):
+    """Represents coordinates for global forest monitoring tiles."""
+    tile_id: str
+    grid_x: int  # 0-9 for 10x10 grid
+    grid_y: int  # 0-9 for 10x10 grid
+    geo_bounds: BoundingBox  # Geographic bounds in decimal degrees
+    center_lat_lon: Tuple[float, float]  # (lat, lon) center point
+    mgrs_tile: Optional[str] = None  # MGRS tile identifier if applicable
+    
+
 class GridError(Exception):
     """Custom exception for grid calculation errors."""
     pass
@@ -348,6 +358,227 @@ class GridCalculator:
                 'lon': sum(tile.center_lat_lon[1] for tile in tiles) / len(tiles)
             }
         }
+
+
+class GlobalGridCalculator:
+    """
+    Extended grid calculator for global forest monitoring.
+    Generates 10x10 grids for any global bounding box coordinates.
+    """
+    
+    def __init__(self, grid_size: int = 10):
+        """
+        Initialize the global grid calculator.
+        
+        Args:
+            grid_size: Number of tiles per side (default: 10 for 10x10 grid)
+        """
+        self.grid_size = grid_size
+        self.total_tiles = grid_size * grid_size
+        logger.info(f"Initialized global grid calculator: {grid_size}x{grid_size} grid")
+    
+    def calculate_global_grid(self, bounding_box: List[float]) -> List[GlobalTileCoordinates]:
+        """
+        Calculate a 10x10 grid for any global bounding box.
+        
+        Args:
+            bounding_box: [west, south, east, north] in decimal degrees
+            
+        Returns:
+            List of GlobalTileCoordinates for the 10x10 grid
+            
+        Raises:
+            GridError: If bounding box is invalid
+        """
+        if len(bounding_box) != 4:
+            raise GridError("Bounding box must contain exactly 4 coordinates: [west, south, east, north]")
+        
+        west, south, east, north = bounding_box
+        
+        # Validate bounding box
+        if west >= east:
+            raise GridError(f"West ({west}) must be less than east ({east})")
+        if south >= north:
+            raise GridError(f"South ({south}) must be less than north ({north})")
+        
+        # Validate coordinate ranges
+        if not (-180 <= west <= 180) or not (-180 <= east <= 180):
+            raise GridError("Longitude values must be between -180 and 180")
+        if not (-90 <= south <= 90) or not (-90 <= north <= 90):
+            raise GridError("Latitude values must be between -90 and 90")
+        
+        logger.info(f"Calculating global grid for bounding box: [{west}, {south}, {east}, {north}]")
+        
+        # Calculate grid cell dimensions
+        lat_step = (north - south) / self.grid_size
+        lon_step = (east - west) / self.grid_size
+        
+        tiles = []
+        
+        # Generate 10x10 grid of tiles
+        for y in range(self.grid_size):
+            for x in range(self.grid_size):
+                # Calculate bounds for this tile
+                tile_west = west + (x * lon_step)
+                tile_east = west + ((x + 1) * lon_step)
+                tile_south = south + (y * lat_step)
+                tile_north = south + ((y + 1) * lat_step)
+                
+                # Calculate center coordinates
+                center_lon = (tile_west + tile_east) / 2
+                center_lat = (tile_south + tile_north) / 2
+                
+                # Create tile coordinate object
+                tile = GlobalTileCoordinates(
+                    tile_id=f"tile_{x}_{y}",
+                    grid_x=x,
+                    grid_y=y,
+                    geo_bounds=BoundingBox(tile_west, tile_south, tile_east, tile_north),
+                    center_lat_lon=(center_lat, center_lon),
+                    mgrs_tile=None  # Will be populated later when needed
+                )
+                
+                tiles.append(tile)
+        
+        logger.info(f"Generated {len(tiles)} tiles for global grid")
+        return tiles
+    
+    def get_sentinel_mgrs_tiles(self, bounding_box: List[float]) -> List[str]:
+        """
+        Determine which Sentinel-2 MGRS tiles are needed for the bounding box.
+        
+        Args:
+            bounding_box: [west, south, east, north] in decimal degrees
+            
+        Returns:
+            List of MGRS tile identifiers needed to cover the area
+            
+        Note:
+            This is a placeholder implementation. In production, you would use
+            a library like pyproj or sentinelsat to determine actual MGRS tiles.
+        """
+        west, south, east, north = bounding_box
+        
+        # Placeholder implementation - in reality you'd use proper MGRS calculation
+        # For now, we'll create a simple approximation based on coordinates
+        
+        # Each MGRS tile is roughly 110km x 110km at the equator
+        # This is a very rough approximation for demonstration
+        lat_tiles = max(1, int((north - south) * 111 / 110))  # ~111 km per degree
+        lon_tiles = max(1, int((east - west) * 111 * math.cos(math.radians((north + south) / 2)) / 110))
+        
+        # Generate placeholder MGRS tile names
+        mgrs_tiles = []
+        base_zone = 30 + int((west + 180) / 6)  # Rough UTM zone calculation
+        
+        for lat_idx in range(lat_tiles):
+            for lon_idx in range(lon_tiles):
+                # This is a simplified MGRS tile naming - not accurate!
+                letter_idx = ord('U') + lat_idx  # Start from 'U' and increment
+                mgrs_tile = f"{base_zone + lon_idx}T{chr(letter_idx)}GA"
+                mgrs_tiles.append(mgrs_tile)
+        
+        logger.info(f"Estimated MGRS tiles needed: {mgrs_tiles}")
+        return mgrs_tiles
+    
+    def validate_global_coordinates(self, bounding_box: List[float]) -> Tuple[bool, str]:
+        """
+        Validate global bounding box coordinates.
+        
+        Args:
+            bounding_box: [west, south, east, north] in decimal degrees
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        try:
+            if len(bounding_box) != 4:
+                return False, "Bounding box must contain exactly 4 coordinates"
+            
+            west, south, east, north = bounding_box
+            
+            # Check coordinate ranges
+            if not (-180 <= west <= 180):
+                return False, f"West longitude must be between -180 and 180, got {west}"
+            if not (-180 <= east <= 180):
+                return False, f"East longitude must be between -180 and 180, got {east}"
+            if not (-90 <= south <= 90):
+                return False, f"South latitude must be between -90 and 90, got {south}"
+            if not (-90 <= north <= 90):
+                return False, f"North latitude must be between -90 and 90, got {north}"
+            
+            # Check bounding box logic
+            if west >= east:
+                return False, f"West longitude ({west}) must be less than east longitude ({east})"
+            if south >= north:
+                return False, f"South latitude ({south}) must be less than north latitude ({north})"
+            
+            # Check for reasonable size (prevent extremely large requests)
+            lat_diff = north - south
+            lon_diff = east - west
+            if lat_diff > 10 or lon_diff > 10:
+                return False, "Bounding box too large. Maximum allowed size is 10 degrees in any direction"
+            
+            return True, "Valid bounding box coordinates"
+            
+        except (TypeError, ValueError) as e:
+            return False, f"Invalid coordinate format: {str(e)}"
+    
+    def calculate_grid_area_km2(self, bounding_box: List[float]) -> Dict[str, float]:
+        """
+        Calculate area statistics for the bounding box and individual tiles.
+        
+        Args:
+            bounding_box: [west, south, east, north] in decimal degrees
+            
+        Returns:
+            Dictionary with area calculations in square kilometers
+        """
+        west, south, east, north = bounding_box
+        
+        # Calculate approximate area using Haversine formula
+        # This is a simplified calculation - for precise areas, use proper geodetic calculations
+        
+        # Calculate width at center latitude
+        center_lat = (north + south) / 2
+        lat_distance_km = (north - south) * 111.32  # ~111.32 km per degree latitude
+        
+        # Longitude distance varies by latitude
+        lon_distance_km = (east - west) * 111.32 * math.cos(math.radians(center_lat))
+        
+        total_area_km2 = lat_distance_km * lon_distance_km
+        tile_area_km2 = total_area_km2 / self.total_tiles
+        
+        return {
+            "total_area_km2": round(total_area_km2, 2),
+            "tile_area_km2": round(tile_area_km2, 4),
+            "grid_dimensions_km": {
+                "width": round(lon_distance_km, 2),
+                "height": round(lat_distance_km, 2)
+            },
+            "tile_dimensions_km": {
+                "width": round(lon_distance_km / self.grid_size, 4),
+                "height": round(lat_distance_km / self.grid_size, 4)
+            }
+        }
+    
+    def get_tile_by_coordinates(self, tiles: List[GlobalTileCoordinates], lat: float, lon: float) -> Optional[GlobalTileCoordinates]:
+        """
+        Find the tile that contains the given coordinates.
+        
+        Args:
+            tiles: List of all tile coordinates
+            lat: Latitude in decimal degrees
+            lon: Longitude in decimal degrees
+            
+        Returns:
+            GlobalTileCoordinates object if found, None otherwise
+        """
+        for tile in tiles:
+            if (tile.geo_bounds.left <= lon <= tile.geo_bounds.right and
+                tile.geo_bounds.bottom <= lat <= tile.geo_bounds.top):
+                return tile
+        return None
 
 
 def calculate_grid_for_imagery(imagery_metadata: Dict, grid_size: int = 32, tile_size: int = 32) -> List[TileCoordinates]:
