@@ -21,3 +21,7 @@ redis==5.0.1
 # Utilities
 python-dotenv==1.0.0
 httpx==0.26.0
+
+# Development and testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
