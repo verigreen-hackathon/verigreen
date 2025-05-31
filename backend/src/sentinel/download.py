@@ -6,7 +6,7 @@ import os
 import logging
 from typing import List, Dict, Optional, Tuple
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import boto3
 from botocore import UNSIGNED
@@ -28,10 +28,6 @@ BATANG_TORU_CONFIG = {
     "bands": ["B04", "B08"],  # B04=Red, B08=NIR for NDVI calculation
     "s3_bucket": "sentinel-s2-l2a",
     "coverage_area": (10.24, 10.24),  # km x km (standard Sentinel-2 tile)
-    "date_range": {
-        "start": "2024-01-01",
-        "end": "2024-12-31"
-    },
     "cloud_cover_max": 20,  # Maximum acceptable cloud cover %
 }
 
@@ -46,13 +42,13 @@ def get_s3_client():
     return boto3.client('s3', config=Config(signature_version=UNSIGNED))
 
 
-def construct_s3_path_for_batang_toru(band: str, date: str = "2024/6/15") -> str:
+def construct_s3_path_for_batang_toru(band: str, date: str) -> str:
     """
     Construct the S3 path for a specific band of the Batang Toru tile.
     
     Args:
         band: Band identifier (e.g., 'B04', 'B08')
-        date: Date in format "YYYY/M/D" (default: recent cloud-free date)
+        date: Date in format "YYYY/M/D"
         
     Returns:
         str: S3 path to the band file
@@ -71,9 +67,61 @@ def construct_s3_path_for_batang_toru(band: str, date: str = "2024/6/15") -> str
     return f"tiles/{utm_zone}/{latitude_band}/{square}/{year}/{month}/{day}/0/R10m/{band}.jp2"
 
 
+def find_available_dates_for_tile(s3_client, tile_id: str, max_days_back: int = 30) -> List[str]:
+    """
+    Find available dates for a Sentinel-2 tile by querying the S3 bucket.
+    
+    Args:
+        s3_client: Configured boto3 S3 client
+        tile_id: Sentinel-2 tile ID (e.g., '47NQH')
+        max_days_back: Maximum number of days to look back from current date
+        
+    Returns:
+        List of available dates in "YYYY/M/D" format, sorted by most recent first
+    """
+    config = BATANG_TORU_CONFIG
+    tile_parts = list(tile_id)
+    utm_zone = ''.join(tile_parts[:2])  # '47'
+    latitude_band = tile_parts[2]  # 'N'
+    square = ''.join(tile_parts[3:])  # 'QH'
+    
+    available_dates = []
+    current_date = datetime.now()
+    
+    # Check the last max_days_back days
+    for days_ago in range(max_days_back):
+        check_date = current_date - timedelta(days=days_ago)
+        year = check_date.year
+        month = check_date.month
+        day = check_date.day
+        
+        # Construct the prefix to check if this date has data
+        date_prefix = f"tiles/{utm_zone}/{latitude_band}/{square}/{year}/{month}/{day}/"
+        
+        try:
+            # List objects with this prefix
+            response = s3_client.list_objects_v2(
+                Bucket=config["s3_bucket"],
+                Prefix=date_prefix,
+                MaxKeys=1
+            )
+            
+            # If we found objects, this date has data
+            if response.get('Contents'):
+                date_str = f"{year}/{month}/{day}"
+                available_dates.append(date_str)
+                logger.info(f"Found available Sentinel-2 data for {date_str}")
+                
+        except Exception as e:
+            logger.debug(f"No data found for {year}/{month}/{day}: {e}")
+            continue
+    
+    return available_dates
+
+
 def find_recent_cloud_free_date(tile_id: str, target_bands: List[str]) -> Optional[str]:
     """
-    Find a recent date with cloud-free imagery for the Batang Toru area.
+    Find a recent date with cloud-free imagery for the specified tile.
     
     Args:
         tile_id: Sentinel-2 tile ID
@@ -82,24 +130,55 @@ def find_recent_cloud_free_date(tile_id: str, target_bands: List[str]) -> Option
     Returns:
         Date string in "YYYY/M/D" format or None if no suitable date found
     """
-    # For demo purposes, return a known good date
-    # In production, you'd query the Sentinel-2 metadata to find recent cloud-free dates
-    recent_dates = [
-        "2024/6/15",  # Mid-year, often good weather
-        "2024/7/10", 
-        "2024/8/5",
-        "2024/5/20",
-        "2024/9/12"
-    ]
+    s3_client = get_s3_client()
     
-    # Return the first date (in production, you'd validate availability)
-    return recent_dates[0]
+    # Get available dates from the last 30 days
+    available_dates = find_available_dates_for_tile(s3_client, tile_id, max_days_back=30)
+    
+    if not available_dates:
+        logger.warning(f"No available dates found for tile {tile_id} in the last 30 days")
+        # Fallback to known dates that typically have data
+        fallback_dates = [
+            # Use dates from early 2025 that are more likely to exist
+            f"{datetime.now().year}/5/15",
+            f"{datetime.now().year}/4/20", 
+            f"{datetime.now().year}/3/25",
+            f"{datetime.now().year - 1}/12/15",
+            f"{datetime.now().year - 1}/11/10"
+        ]
+        logger.info(f"Using fallback dates: {fallback_dates}")
+        return fallback_dates[0]
+    
+    # Verify that the most recent date has all required bands
+    for date in available_dates:
+        all_bands_available = True
+        for band in target_bands:
+            s3_path = construct_s3_path_for_batang_toru(band, date)
+            try:
+                s3_client.head_object(Bucket=BATANG_TORU_CONFIG["s3_bucket"], Key=s3_path)
+                logger.debug(f"Band {band} available for date {date}")
+            except s3_client.exceptions.ClientError:
+                logger.debug(f"Band {band} not available for date {date}")
+                all_bands_available = False
+                break
+        
+        if all_bands_available:
+            logger.info(f"Found complete dataset for date {date}")
+            return date
+    
+    # If no complete dataset found, return the most recent date anyway
+    if available_dates:
+        logger.warning(f"No complete dataset found, using most recent: {available_dates[0]}")
+        return available_dates[0]
+    
+    return None
 
 
 def download_band_for_claim(s3_client, band: str, output_dir: Path, 
-                           claim_config: Dict, date: Optional[str] = None) -> Optional[Path]:
+                           claim_config: Dict, date: Optional[str] = None, 
+                           retry_count: int = 3) -> Optional[Path]:
     """
-    Download a single band for a specific land claim.
+    Download a single band for a specific land claim with automatic date discovery and retry logic.
     
     Args:
         s3_client: Configured boto3 S3 client
@@ -107,39 +186,93 @@ def download_band_for_claim(s3_client, band: str, output_dir: Path,
         output_dir: Directory to save downloaded files
         claim_config: Configuration from batang_toru_mapper
         date: Specific date to download (auto-detect if None)
+        retry_count: Number of retry attempts per date
         
     Returns:
         Path to downloaded file or None if download failed
     """
+    # Get list of candidate dates
     if date is None:
-        date = find_recent_cloud_free_date(claim_config["tile_ids"][0], [band])
+        tile_id = claim_config["tile_ids"][0] if claim_config.get("tile_ids") else BATANG_TORU_CONFIG["tile_id"]
+        candidate_dates = []
         
-    if not date:
-        logger.error(f"No suitable date found for band {band}")
-        return None
+        # First try to find available dates dynamically
+        try:
+            available_dates = find_available_dates_for_tile(s3_client, tile_id, max_days_back=30)
+            candidate_dates.extend(available_dates[:5])  # Try up to 5 most recent
+        except Exception as e:
+            logger.warning(f"Failed to discover available dates: {e}")
+        
+        # Add fallback dates
+        current_year = datetime.now().year
+        fallback_dates = [
+            f"{current_year}/5/15",
+            f"{current_year}/4/20", 
+            f"{current_year}/3/25",
+            f"{current_year - 1}/12/15",
+            f"{current_year - 1}/11/10",
+            "2024/6/15",  # Keep original as last resort
+        ]
+        
+        # Combine and deduplicate
+        all_dates = candidate_dates + [d for d in fallback_dates if d not in candidate_dates]
+        candidate_dates = all_dates[:8]  # Limit to 8 attempts total
+        
+        logger.info(f"Will try dates in order: {candidate_dates}")
+    else:
+        candidate_dates = [date]
     
-    s3_path = construct_s3_path_for_batang_toru(band, date)
+    # Try each candidate date
+    for attempt_date in candidate_dates:
+        logger.info(f"Attempting to download {band} for date {attempt_date}")
+        
+        s3_path = construct_s3_path_for_batang_toru(band, attempt_date)
+        
+        # Create filename with claim info
+        processing_area = claim_config["processing_area"]
+        lat = processing_area["center_point"]["lat"]
+        lon = processing_area["center_point"]["lon"]
+        
+        local_filename = f"{band}_{lat:.3f}_{lon:.3f}_{attempt_date.replace('/', '-')}.jp2"
+        local_path = output_dir / local_filename
+        
+        # Try to download this date with retries
+        for attempt in range(1, retry_count + 1):
+            try:
+                logger.info(f"Downloading {band} for claim area (attempt {attempt}/{retry_count})")
+                logger.info(f"Downloading {band} for Batang Toru area from s3://{BATANG_TORU_CONFIG['s3_bucket']}/{s3_path}")
+                
+                s3_client.download_file(
+                    BATANG_TORU_CONFIG['s3_bucket'],
+                    s3_path,
+                    str(local_path)
+                )
+                logger.info(f"Successfully downloaded {band} from {attempt_date} to {local_path}")
+                return local_path
+                
+            except s3_client.exceptions.ClientError as e:
+                error_code = e.response['Error']['Code']
+                if error_code == '404':
+                    logger.warning(f"Data not available for {band} on {attempt_date} (404 Not Found)")
+                    break  # No point retrying 404s, try next date
+                else:
+                    logger.error(f"Failed to download {band}: An error occurred ({error_code}) when calling the HeadObject operation: {e.response['Error']['Message']}")
+                    if attempt < retry_count:
+                        logger.warning(f"Retrying download for {band}")
+                    else:
+                        logger.error(f"Failed to download {band} after {retry_count} attempts")
+                        break  # Try next date
+                        
+            except Exception as e:
+                logger.error(f"Failed to download {band}: {e}")
+                if attempt < retry_count:
+                    logger.warning(f"Retrying download for {band}")
+                else:
+                    logger.error(f"Failed to download {band} after {retry_count} attempts")
+                    break  # Try next date
     
-    # Create filename with claim info
-    processing_area = claim_config["processing_area"]
-    lat = processing_area["center_point"]["lat"]
-    lon = processing_area["center_point"]["lon"]
-    
-    local_filename = f"{band}_{lat:.3f}_{lon:.3f}_{date.replace('/', '-')}.jp2"
-    local_path = output_dir / local_filename
-    
-    try:
-        logger.info(f"Downloading {band} for Batang Toru area from s3://{BATANG_TORU_CONFIG['s3_bucket']}/{s3_path}")
-        s3_client.download_file(
-            BATANG_TORU_CONFIG['s3_bucket'],
-            s3_path,
-            str(local_path)
-        )
-        logger.info(f"Successfully downloaded {band} to {local_path}")
-        return local_path
-    except Exception as e:
-        logger.error(f"Failed to download {band}: {e}")
-        return None
+    logger.error(f"Failed to download {band} for any available date")
+    return None
 
 
 def download_band(s3_client, band: str, output_dir: Path) -> Optional[Path]:

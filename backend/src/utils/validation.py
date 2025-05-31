@@ -5,7 +5,7 @@ import math
 from typing import Tuple
 
 # Fixed import - using absolute path
-from config import GRID_CONFIG, CLAIM_VALIDATION
+from backend.src.config import GRID_CONFIG, CLAIM_VALIDATION
 
 
 def grid_to_gps_coordinates(southwest_x: int, southwest_y: int, northeast_x: int, northeast_y: int) -> Tuple[float, float, float, float]:
