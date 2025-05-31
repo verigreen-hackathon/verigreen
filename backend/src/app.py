@@ -32,7 +32,7 @@ app.add_middleware(
 )
 
 # Include API routes
-app.include_router(api_router, tags=["Land Claims"])
+app.include_router(api_router, tags=["Global Forest Monitoring", "Land Claims"])
 
 
 @app.get("/")

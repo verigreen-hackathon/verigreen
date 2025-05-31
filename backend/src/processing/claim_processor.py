@@ -334,7 +334,7 @@ class ClaimProcessor:
             dst.update_tags(
                 tile_id=coordinates.tile_id,
                 mean_ndvi=str(ndvi_result.mean_ndvi),
-                forest_health=str(ndvi_result.meets_threshold),
+                forest_health=str(ndvi_result.threshold_passed),
                 calculation_date=datetime.now().isoformat()
             )
     

@@ -1,5 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, BackgroundTasks
-from api.models import LandClaimRequest, LandClaimResponse, LandClaimError
+from api.models import (
+    LandClaimRequest, LandClaimResponse, LandClaimError,
+    GlobalForestRequest, GlobalForestResponse, ForestTile
+)
 from utils.validation import (
     validate_grid_coordinates,
     grid_to_gps_coordinates,
@@ -13,6 +16,7 @@ from datetime import datetime, timedelta
 import uuid
 import logging
 import asyncio
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +25,102 @@ router = APIRouter()
 # Initialize the claim processor
 claim_processor = ClaimProcessor()
 
+
+# ============================================================================
+# NEW GLOBAL FOREST MONITORING API
+# ============================================================================
+
+@router.post("/forest/analyze", response_model=GlobalForestResponse)
+async def analyze_global_forest(request: GlobalForestRequest):
+    """
+    Analyze forest health for any global bounding box coordinates.
+    
+    This endpoint accepts a bounding box in decimal degrees and returns a 10x10 grid
+    of forest health scores based on satellite imagery analysis.
+    
+    Args:
+        request: GlobalForestRequest containing:
+            - bounding_box: [west, south, east, north] in decimal degrees
+            - wallet_address: Ethereum wallet for data access
+    
+    Returns:
+        GlobalForestResponse with 100 forest tiles containing health scores
+    """
+    analysis_id = str(uuid.uuid4())
+    start_time = time.time()
+    
+    try:
+        logger.info(f"Starting global forest analysis {analysis_id} for bounding box {request.bounding_box}")
+        
+        west, south, east, north = request.bounding_box
+        
+        # Log the coordinates for debugging
+        logger.info(f"Processing coordinates: West={west}, South={south}, East={east}, North={north}")
+        
+        # TODO: In the next subtasks, we'll implement the actual processing pipeline
+        # For now, we'll create a mock response to validate the API structure
+        
+        # Generate mock 10x10 grid of forest tiles
+        forest_grid = []
+        
+        # Calculate grid cell size
+        lat_step = (north - south) / 10
+        lon_step = (east - west) / 10
+        
+        for y in range(10):
+            for x in range(10):
+                # Calculate center coordinates for this tile
+                tile_lon = west + (x * lon_step) + (lon_step / 2)
+                tile_lat = south + (y * lat_step) + (lat_step / 2)
+                
+                # Mock forest health calculation (will be replaced with real NDVI processing)
+                # For now, generate varied but realistic values
+                mock_ndvi = 0.3 + (0.4 * ((x + y) % 7) / 6)  # NDVI between 0.3-0.7
+                mock_health_score = min(1.0, max(0.0, mock_ndvi + 0.1))  # Health score 0.4-0.8
+                
+                tile = ForestTile(
+                    tile_id=f"tile_{x}_{y}",
+                    x=x,
+                    y=y,
+                    health_score=round(mock_health_score, 3),
+                    ndvi=round(mock_ndvi, 3),
+                    coordinates=[round(tile_lon, 6), round(tile_lat, 6)]
+                )
+                forest_grid.append(tile)
+        
+        processing_time = time.time() - start_time
+        
+        # Create response
+        response = GlobalForestResponse(
+            analysis_id=analysis_id,
+            status="completed",
+            forest_grid=forest_grid,
+            filecoin_cid=None,  # Will be populated when Filecoin integration is implemented
+            processing_time=round(processing_time, 3),
+            bounding_box=request.bounding_box,
+            wallet_address=request.wallet_address
+        )
+        
+        logger.info(f"Completed global forest analysis {analysis_id} in {processing_time:.3f} seconds")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to process global forest analysis {analysis_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "analysis_failed", 
+                "message": "Failed to process global forest analysis",
+                "analysis_id": analysis_id
+            }
+        )
+
+
+# ============================================================================
+# EXISTING LAND CLAIM API (Legacy)
+# ============================================================================
 
 @router.post("/land/claim", response_model=LandClaimResponse)
 async def create_land_claim(request: LandClaimRequest):
