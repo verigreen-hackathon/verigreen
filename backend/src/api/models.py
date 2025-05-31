@@ -132,16 +132,16 @@ class GlobalForestRequest(BaseModel):
 class ForestTile(BaseModel):
     """Individual tile in the 10x10 forest grid"""
     tile_id: str = Field(..., description="Unique identifier for this tile (e.g., 'tile_0_0')")
-    x: int = Field(..., description="X coordinate in the 10x10 grid (0-9)", ge=0, le=9)
-    y: int = Field(..., description="Y coordinate in the 10x10 grid (0-9)", ge=0, le=9)
-    health_score: float = Field(..., description="Forest health score (0.0-1.0)", ge=0.0, le=1.0)
-    ndvi: float = Field(..., description="Normalized Difference Vegetation Index (-1.0 to 1.0)", ge=-1.0, le=1.0)
     coordinates: List[float] = Field(
         ..., 
-        description="Geographic coordinates of tile center [longitude, latitude]",
+        description="Geographic coordinates of tile center [latitude, longitude]",
         min_items=2,
         max_items=2
     )
+    health_score: float = Field(..., description="Forest health score (0.0-1.0)", ge=0.0, le=1.0)
+    ndvi: float = Field(..., description="Normalized Difference Vegetation Index (-1.0 to 1.0)", ge=-1.0, le=1.0)
+    vegetation_type: str = Field(..., description="Type of vegetation detected")
+    last_updated: str = Field(..., description="Timestamp when this tile was last processed")
 
 
 class GlobalForestResponse(BaseModel):

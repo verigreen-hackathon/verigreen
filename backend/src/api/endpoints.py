@@ -11,6 +11,7 @@ from utils.validation import (
 )
 from utils.database import store_claim, get_claim, get_all_claims
 from processing.claim_processor import ClaimProcessor, ProcessingResult
+from processing.global_ndvi_processor import global_ndvi_processor
 from sentinel.batang_toru_mapper import get_claim_download_config
 from sentinel.grid import GlobalGridCalculator, GridError
 from datetime import datetime, timedelta
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Initialize the claim processor and global grid calculator
+# Initialize processors
 claim_processor = ClaimProcessor()
 global_grid_calculator = GlobalGridCalculator()
 
@@ -35,84 +36,57 @@ global_grid_calculator = GlobalGridCalculator()
 @router.post("/forest/analyze", response_model=GlobalForestResponse)
 async def analyze_global_forest(request: GlobalForestRequest):
     """
-    Analyze forest health for any global bounding box coordinates.
+    NEW GLOBAL API: Analyze forest health for any global bounding box coordinates.
     
-    This endpoint accepts a bounding box in decimal degrees and returns a 10x10 grid
-    of forest health scores based on satellite imagery analysis.
+    This endpoint accepts global coordinates and returns a 10x10 grid of forest tiles
+    with NDVI-based health scores, biome classification, and vegetation analysis.
     
     Args:
-        request: GlobalForestRequest containing:
-            - bounding_box: [west, south, east, north] in decimal degrees
-            - wallet_address: Ethereum wallet for data access
-    
+        request: GlobalForestRequest with bounding_box and wallet_address
+        
     Returns:
-        GlobalForestResponse with 100 forest tiles containing health scores
+        GlobalForestResponse with 100 forest tiles and comprehensive metadata
     """
-    analysis_id = str(uuid.uuid4())
     start_time = time.time()
+    analysis_id = str(uuid.uuid4())
+    
+    logger.info(f"🌍 Starting global forest analysis {analysis_id} for coordinates: {request.bounding_box}")
     
     try:
-        logger.info(f"Starting global forest analysis {analysis_id} for bounding box {request.bounding_box}")
-        
-        # Validate coordinates using our GlobalGridCalculator
+        # Step 1: Validate global coordinates
         is_valid, error_msg = global_grid_calculator.validate_global_coordinates(request.bounding_box)
         if not is_valid:
-            logger.warning(f"Invalid coordinates for analysis {analysis_id}: {error_msg}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "error": "invalid_coordinates",
-                    "message": error_msg,
-                    "analysis_id": analysis_id
-                }
+                detail=f"Invalid bounding box coordinates: {error_msg}"
             )
         
-        # Generate the 10x10 grid using GlobalGridCalculator
-        try:
-            global_tiles = global_grid_calculator.calculate_global_grid(request.bounding_box)
-        except GridError as e:
-            logger.error(f"Grid calculation failed for analysis {analysis_id}: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "error": "grid_calculation_failed",
-                    "message": str(e),
-                    "analysis_id": analysis_id
-                }
-            )
+        # Step 2: Process NDVI for global coordinates using the new processor
+        logger.info(f"🧠 Processing global NDVI analysis for {analysis_id}")
+        ndvi_result = await global_ndvi_processor.process_global_coordinates(
+            bounding_box=request.bounding_box,
+            analysis_id=analysis_id,
+            force_download=False  # Use cached data when available
+        )
         
-        # Calculate area statistics
-        area_stats = global_grid_calculator.calculate_grid_area_km2(request.bounding_box)
-        logger.info(f"Grid covers {area_stats['total_area_km2']} km² with {area_stats['tile_area_km2']} km² per tile")
-        
-        # Convert GlobalTileCoordinates to ForestTile objects with mock NDVI data
-        # TODO: In the next subtasks, we'll replace this with real Sentinel-2 processing
+        # Step 3: Convert NDVI results to ForestTile format for API response
         forest_grid = []
-        
-        for global_tile in global_tiles:
-            # Mock forest health calculation (will be replaced with real NDVI processing)
-            # Generate varied but realistic values based on geographic position
-            mock_ndvi = 0.3 + (0.4 * ((global_tile.grid_x + global_tile.grid_y) % 7) / 6)  # NDVI between 0.3-0.7
-            mock_health_score = min(1.0, max(0.0, mock_ndvi + 0.1))  # Health score 0.4-0.8
-            
+        for ndvi_tile in ndvi_result.tiles:
             forest_tile = ForestTile(
-                tile_id=global_tile.tile_id,
-                x=global_tile.grid_x,
-                y=global_tile.grid_y,
-                health_score=round(mock_health_score, 3),
-                ndvi=round(mock_ndvi, 3),
-                coordinates=[
-                    round(global_tile.center_lat_lon[1], 6),  # longitude
-                    round(global_tile.center_lat_lon[0], 6)   # latitude
-                ]
+                tile_id=ndvi_tile.tile_id,
+                coordinates=list(ndvi_tile.center_coordinates),  # [lat, lon]
+                health_score=ndvi_tile.health_score,
+                ndvi=ndvi_tile.mean_ndvi,
+                vegetation_type=ndvi_tile.vegetation_type,
+                last_updated=ndvi_tile.processed_at
             )
             forest_grid.append(forest_tile)
         
-        processing_time = time.time() - start_time
+        # Step 4: Calculate area statistics
+        area_stats = global_grid_calculator.calculate_grid_area_km2(request.bounding_box)
         
-        # Get estimated MGRS tiles for future Sentinel-2 integration
-        mgrs_tiles = global_grid_calculator.get_sentinel_mgrs_tiles(request.bounding_box)
-        logger.info(f"Analysis {analysis_id} would require MGRS tiles: {mgrs_tiles}")
+        # Step 5: Calculate processing time
+        processing_time = time.time() - start_time
         
         # Create response
         response = GlobalForestResponse(
@@ -125,34 +99,84 @@ async def analyze_global_forest(request: GlobalForestRequest):
             wallet_address=request.wallet_address
         )
         
-        # Add area statistics and other metadata
+        # Add comprehensive metadata with NDVI analysis results
         response.metadata = {
-            "grid_size": "10x10",
-            "total_tiles": 100,
+            "grid_size": f"{ndvi_result.grid_size}x{ndvi_result.grid_size}",
+            "total_tiles": len(forest_grid),
             "coordinate_system": "WGS84",
-            "data_source": "Sentinel-2",
+            "data_source": "Sentinel-2 L2A",
             "api_version": "2.0.0",
+            
+            # Area statistics
             "area_statistics": area_stats,
-            "estimated_mgrs_tiles": mgrs_tiles,
-            "grid_calculator": "GlobalGridCalculator",
-            "coordinate_validation": "passed"
+            
+            # NDVI analysis results
+            "ndvi_analysis": {
+                "mean_ndvi_global": ndvi_result.mean_ndvi_global,
+                "mean_health_score": ndvi_result.mean_health_score,
+                "forest_coverage_percentage": ndvi_result.forest_coverage_percentage,
+                "total_area_analyzed_km2": ndvi_result.total_area_km2
+            },
+            
+            # Biome distribution
+            "biome_distribution": _calculate_biome_distribution(ndvi_result.tiles),
+            
+            # Processing information
+            "processing_details": {
+                "mgrs_tiles_used": ndvi_result.mgrs_tiles_used,
+                "sentinel_dates": ndvi_result.sentinel_dates,
+                "data_sources": ndvi_result.data_sources,
+                "processing_algorithm": "GlobalNDVIProcessor",
+                "seasonal_adjustments_applied": True,
+                "biome_classification_enabled": True
+            },
+            
+            # Quality metrics
+            "data_quality": {
+                "tiles_with_high_confidence": len([t for t in ndvi_result.tiles if t.valid_pixel_percentage > 90]),
+                "tiles_with_medium_confidence": len([t for t in ndvi_result.tiles if 70 <= t.valid_pixel_percentage <= 90]),
+                "tiles_with_low_confidence": len([t for t in ndvi_result.tiles if t.valid_pixel_percentage < 70]),
+                "average_pixel_validity": round(sum(t.valid_pixel_percentage for t in ndvi_result.tiles) / len(ndvi_result.tiles), 1)
+            },
+            
+            # Errors (if any)
+            "errors": ndvi_result.errors if ndvi_result.errors else None
         }
         
-        logger.info(f"Completed global forest analysis {analysis_id} in {processing_time:.3f} seconds")
+        logger.info(f"✅ Completed global forest analysis {analysis_id} in {processing_time:.2f}s")
+        logger.info(f"📊 Results: {ndvi_result.mean_health_score:.3f} avg health, {ndvi_result.forest_coverage_percentage:.1f}% forest coverage")
+        
         return response
         
     except HTTPException:
+        # Re-raise HTTP exceptions
         raise
     except Exception as e:
-        logger.error(f"Failed to process global forest analysis {analysis_id}: {str(e)}")
+        error_msg = f"Internal error processing global forest analysis: {str(e)}"
+        logger.error(f"❌ {error_msg}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "error": "analysis_failed", 
-                "message": "Failed to process global forest analysis",
-                "analysis_id": analysis_id
-            }
+            detail=error_msg
         )
+
+def _calculate_biome_distribution(tiles: list) -> dict:
+    """Calculate the distribution of biomes across all tiles."""
+    biome_counts = {}
+    for tile in tiles:
+        biome = tile.biome_classification
+        biome_counts[biome] = biome_counts.get(biome, 0) + 1
+    
+    total_tiles = len(tiles)
+    biome_percentages = {
+        biome: round((count / total_tiles) * 100, 1)
+        for biome, count in biome_counts.items()
+    }
+    
+    return {
+        "counts": biome_counts,
+        "percentages": biome_percentages,
+        "dominant_biome": max(biome_counts.items(), key=lambda x: x[1])[0] if biome_counts else "unknown"
+    }
 
 
 # ============================================================================
