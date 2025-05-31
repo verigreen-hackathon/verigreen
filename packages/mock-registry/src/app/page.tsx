@@ -3,9 +3,16 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
+interface UserData {
+  fullName: string;
+  email: string;
+  token: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
 export default function Home() {
   const router = useRouter()
-  const [userData, setUserData] = useState<any>(null)
+  const [userData, setUserData] = useState<UserData | null>(null)
 
   useEffect(() => {
     const storedUserData = localStorage.getItem('userData')
@@ -26,7 +33,7 @@ export default function Home() {
         {userData ? (
           <>
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              Welcome back, {userData.fullName}
+              Welcome back, {userData.fullName || 'User'}
             </h1>
             <p className="text-gray-600 mb-6">
               Access your land records and manage your property information through our secure government portal.
