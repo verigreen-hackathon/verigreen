@@ -58,3 +58,61 @@ next-env.d.ts
 # subgraph
 **/subgraph/node_modules
 **/subgraph/build
+
+# Logs
+logs
+*.log
+dev-debug.log
+# Dependency directories
+node_modules/
+# Environment variables
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+# Task files
+tasks.json
+tasks/ 
+
+.cursor/
+.taskmasterconfig
+scripts/
+
+# Data files
+data/
+!data/.gitkeep
+!data/**/.gitkeep
+!data/README.md
+*.jp2
+*.tif
+*.tiff
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# Backend specific
+backend/.env
+backend/data/

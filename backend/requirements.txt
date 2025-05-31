@@ -1,0 +1,23 @@
+# Core dependencies
+boto3==1.34.14
+botocore==1.34.14
+
+# Geospatial data processing
+rasterio==1.3.9
+numpy==1.26.3
+Pillow==10.2.0
+
+# API framework
+fastapi==0.109.0
+uvicorn==0.25.0
+pydantic==2.5.3
+
+# Filecoin/Storacha integration
+# Will add specific packages later based on Storacha SDK
+
+# Redis for caching
+redis==5.0.1
+
+# Utilities
+python-dotenv==1.0.0
+httpx==0.26.0
