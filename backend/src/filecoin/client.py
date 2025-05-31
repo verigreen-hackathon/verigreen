@@ -8,13 +8,20 @@ enabling storage and retrieval of data on IPFS through Storacha's services.
 import asyncio
 import json
 import logging
+import os
+import subprocess
+import tempfile
+import hashlib
 from typing import Any, Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 from io import BytesIO
+from pathlib import Path
 
 import aiohttp
 import aiofiles
-from multihash import decode as multihash_decode, encode as multihash_encode, SHA2_256
+import certifi
+import ssl
+from multihash import decode as multihash_decode, encode as multihash_encode, constants
 
 logger = logging.getLogger(__name__)
 
@@ -22,418 +29,452 @@ logger = logging.getLogger(__name__)
 @dataclass
 class StorachaConfig:
     """Configuration for Storacha client."""
+    auth_secret: str
+    auth_token: str
+    space_did: str
     base_url: str = "https://up.storacha.network"
-    auth_secret: Optional[str] = None
-    auth_token: Optional[str] = None
-    space_did: Optional[str] = None
-    timeout: int = 30
+    timeout: int = 300  # 5 minutes
 
 
 @dataclass
 class UploadResult:
-    """Result of a successful upload to Storacha."""
-    content_cid: str
-    shard_cids: List[str]
-    size: int
+    """Result of a successful upload operation."""
+    content_cid: str  # The CID of the original content (root)
+    shard_cid: str    # The CID of the CAR file (shard)
+    size: int         # Size of the original data
 
 
 class StorachaError(Exception):
-    """Base exception for Storacha client errors."""
+    """Base exception for Storacha operations."""
     pass
 
 
 class StorachaAuthError(StorachaError):
-    """Authentication-related errors."""
+    """Authentication/authorization related errors."""
     pass
 
 
 class StorachaUploadError(StorachaError):
-    """Upload-related errors."""
+    """Upload operation related errors."""
     pass
+
+
+def create_config_from_env() -> StorachaConfig:
+    """
+    Create StorachaConfig from environment variables.
+    
+    Returns:
+        StorachaConfig instance
+        
+    Raises:
+        StorachaAuthError: If required environment variables are missing
+    """
+    auth_secret = os.getenv("STORACHA_AUTH_SECRET")
+    auth_token = os.getenv("STORACHA_AUTH_TOKEN")
+    space_did = os.getenv("STORACHA_SPACE_DID")
+    base_url = os.getenv("STORACHA_BASE_URL", "https://up.storacha.network")
+    
+    if not all([auth_secret, auth_token, space_did]):
+        missing = []
+        if not auth_secret:
+            missing.append("STORACHA_AUTH_SECRET")
+        if not auth_token:
+            missing.append("STORACHA_AUTH_TOKEN")
+        if not space_did:
+            missing.append("STORACHA_SPACE_DID")
+        
+        raise StorachaAuthError(
+            f"Missing required environment variables: {', '.join(missing)}"
+        )
+    
+    return StorachaConfig(
+        auth_secret=auth_secret,
+        auth_token=auth_token,
+        space_did=space_did,
+        base_url=base_url
+    )
 
 
 class StorachaClient:
     """
-    Async client for Storacha/w3up HTTP API Bridge.
+    Client for interacting with Storacha/web3.storage HTTP API.
     
-    Provides methods for storing and uploading data to IPFS via Storacha.
-    Uses the HTTP API Bridge documented at:
-    https://docs.storacha.network/reference/http-api/
+    Implements the complete upload flow:
+    1. Create CAR file from data
+    2. store/add - Allocate space and get upload URL
+    3. PUT CAR file to provided S3 URL  
+    4. upload/add - Register the upload
     """
     
     def __init__(self, config: StorachaConfig):
-        """
-        Initialize the Storacha client.
-        
-        Args:
-            config: StorachaConfig object with authentication and settings
-        """
         self.config = config
         self._session: Optional[aiohttp.ClientSession] = None
-        
+    
     async def __aenter__(self):
-        """Async context manager entry."""
         await self._ensure_session()
         return self
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        await self.close()
-    
-    async def _ensure_session(self):
-        """Ensure aiohttp session is created."""
-        if self._session is None or self._session.closed:
-            timeout = aiohttp.ClientTimeout(total=self.config.timeout)
-            self._session = aiohttp.ClientSession(timeout=timeout)
-    
-    async def close(self):
-        """Close the HTTP session."""
         if self._session and not self._session.closed:
             await self._session.close()
     
-    def _get_headers(self) -> Dict[str, str]:
-        """
-        Get HTTP headers for Storacha API requests.
-        
-        Returns:
-            Dict containing required headers including authentication
+    async def _ensure_session(self):
+        """Ensure aiohttp session is created with proper SSL configuration."""
+        if self._session is None or self._session.closed:
+            # Create SSL context with proper certificate verification
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
             
-        Raises:
-            StorachaAuthError: If authentication credentials are missing
-        """
-        if not self.config.auth_secret or not self.config.auth_token:
-            raise StorachaAuthError(
-                "Missing authentication credentials. Both auth_secret and auth_token are required."
+            # Create connector with SSL context
+            connector = aiohttp.TCPConnector(ssl=ssl_context)
+            
+            timeout = aiohttp.ClientTimeout(total=self.config.timeout)
+            self._session = aiohttp.ClientSession(
+                timeout=timeout,
+                connector=connector
             )
-        
-        return {
-            "Content-Type": "application/json",
-            "X-Auth-Secret": self.config.auth_secret,
-            "Authorization": self.config.auth_token,
-        }
     
-    async def _make_request(
-        self, 
-        endpoint: str, 
-        tasks: List[List[Any]], 
-        **kwargs
-    ) -> Dict[str, Any]:
+    def _create_car_file(self, data: bytes, filename: str = None) -> Tuple[str, str, int]:
         """
-        Make a request to the Storacha HTTP API Bridge.
+        Create a CAR file from data using ipfs-car CLI.
         
         Args:
-            endpoint: API endpoint path
-            tasks: List of task arrays in format [capability, space_did, params]
-            **kwargs: Additional arguments for aiohttp request
+            data: Raw bytes to convert to CAR
+            filename: Optional filename for the data
             
         Returns:
-            JSON response from the API
+            Tuple of (car_file_path, content_cid, car_size)
+            
+        Raises:
+            StorachaError: If CAR creation fails
+        """
+        try:
+            # Create temporary file for the data
+            with tempfile.NamedTemporaryFile(
+                mode='wb', 
+                delete=False, 
+                suffix=f"_{filename}" if filename else ""
+            ) as tmp_data:
+                tmp_data.write(data)
+                tmp_data_path = tmp_data.name
+            
+            # Create temporary CAR file
+            tmp_car_path = tmp_data_path + ".car"
+            
+            # Use ipfs-car pack to create CAR file
+            result = subprocess.run(
+                ["ipfs-car", "pack", tmp_data_path, "--output", tmp_car_path],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            # Extract content CID from stdout
+            content_cid = result.stdout.strip()
+            
+            # Get CAR file size
+            car_size = os.path.getsize(tmp_car_path)
+            
+            # Clean up original data file
+            os.unlink(tmp_data_path)
+            
+            logger.info(f"Created CAR file: {tmp_car_path} (size: {car_size}, content CID: {content_cid})")
+            
+            return tmp_car_path, content_cid, car_size
+            
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to create CAR file: {e.stderr}")
+            raise StorachaError(f"CAR creation failed: {e.stderr}")
+        except Exception as e:
+            logger.error(f"Unexpected error creating CAR file: {e}")
+            raise StorachaError(f"CAR creation failed: {e}")
+    
+    def _get_car_cid(self, car_file_path: str) -> str:
+        """
+        Get the CID of a CAR file using ipfs-car hash.
+        
+        Args:
+            car_file_path: Path to the CAR file
+            
+        Returns:
+            CID of the CAR file (starts with 'bag...')
+            
+        Raises:
+            StorachaError: If CID calculation fails
+        """
+        try:
+            result = subprocess.run(
+                ["ipfs-car", "hash", car_file_path],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            car_cid = result.stdout.strip()
+            logger.info(f"CAR file CID: {car_cid}")
+            
+            return car_cid
+            
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to calculate CAR CID: {e.stderr}")
+            raise StorachaError(f"CAR CID calculation failed: {e.stderr}")
+    
+    async def _make_bridge_request(self, tasks: List[List]) -> List[Dict[str, Any]]:
+        """
+        Make a request to the Storacha bridge API.
+        
+        Args:
+            tasks: List of tasks in the format specified by Storacha API
+            
+        Returns:
+            Response from the bridge API
             
         Raises:
             StorachaError: If the request fails
         """
         await self._ensure_session()
         
-        url = f"{self.config.base_url}/{endpoint.lstrip('/')}"
-        headers = self._get_headers()
+        headers = {
+            "X-Auth-Secret": self.config.auth_secret,
+            "Authorization": self.config.auth_token,
+            "Content-Type": "application/json"
+        }
         
         payload = {"tasks": tasks}
         
-        logger.debug(f"Making request to {url} with {len(tasks)} tasks")
-        
         try:
-            async with self._session.post(url, json=payload, headers=headers, **kwargs) as response:
+            async with self._session.post(
+                f"{self.config.base_url}/bridge",
+                json=payload,
+                headers=headers
+            ) as response:
+                
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"Bridge API error {response.status}: {error_text}")
+                    raise StorachaError(f"Bridge API error {response.status}: {error_text}")
+                
+                # Handle the DAG-JSON content type that Storacha returns
                 response_text = await response.text()
-                
-                if not response.ok:
-                    logger.error(f"Request failed: {response.status} - {response_text}")
-                    raise StorachaError(f"HTTP {response.status}: {response_text}")
-                
                 try:
-                    return json.loads(response_text)
+                    result = json.loads(response_text)
                 except json.JSONDecodeError as e:
-                    logger.error(f"Failed to decode JSON response: {e}")
+                    logger.error(f"Failed to parse response as JSON: {e}")
+                    logger.error(f"Response text: {response_text}")
                     raise StorachaError(f"Invalid JSON response: {e}")
-                    
+                
+                logger.debug(f"Bridge API response: {result}")
+                
+                return result
+                
         except aiohttp.ClientError as e:
-            logger.error(f"Network error: {e}")
-            raise StorachaError(f"Network error: {e}")
+            logger.error(f"HTTP client error: {e}")
+            raise StorachaError(f"HTTP client error: {e}")
     
-    def _create_simple_car(self, data: bytes) -> Tuple[bytes, str]:
+    async def _store_add(self, car_cid: str, car_size: int) -> Dict[str, Any]:
         """
-        Create a simple CAR file from raw data.
-        
-        This is a basic implementation that creates a minimal CAR file
-        containing a single raw block.
+        Step 1: Allocate space for the CAR file.
         
         Args:
-            data: Raw bytes to include in the CAR
+            car_cid: CID of the CAR file
+            car_size: Size of the CAR file in bytes
             
         Returns:
-            Tuple of (car_bytes, content_cid)
-        """
-        # For now, we'll create a very simple CAR structure
-        # In a production environment, you'd want to use a proper CAR library
-        
-        # Calculate CID for the raw data
-        hash_digest = multihash_encode(data, SHA2_256)
-        
-        # Create a simple CIDv1 for raw codec (0x55)
-        # Format: version(1) + codec(raw=0x55) + multihash
-        cid_bytes = bytes([0x01, 0x55]) + hash_digest
-        content_cid = self._bytes_to_cid_string(cid_bytes)
-        
-        # Create minimal CAR structure
-        # This is a simplified implementation - production would use proper CAR encoding
-        car_header = self._create_car_header([content_cid])
-        car_block = self._create_car_block(cid_bytes, data)
-        
-        car_data = car_header + car_block
-        
-        logger.debug(f"Created CAR file: {len(car_data)} bytes, CID: {content_cid}")
-        return car_data, content_cid
-    
-    def _bytes_to_cid_string(self, cid_bytes: bytes) -> str:
-        """
-        Convert CID bytes to base32-encoded string.
-        
-        Args:
-            cid_bytes: Raw CID bytes
-            
-        Returns:
-            Base32-encoded CID string with 'b' prefix
-        """
-        import base64
-        # For CIDv1, we use base32 encoding with 'b' prefix
-        # This is a simplified version - production should use proper CID library
-        encoded = base64.b32encode(cid_bytes).decode('ascii').lower().rstrip('=')
-        return f"b{encoded}"
-    
-    def _create_car_header(self, roots: List[str]) -> bytes:
-        """
-        Create CAR header bytes.
-        
-        Args:
-            roots: List of root CID strings
-            
-        Returns:
-            Encoded CAR header bytes
-        """
-        # Simplified CAR header creation
-        # Production implementation would use proper CAR encoding
-        header_data = {"version": 1, "roots": roots}
-        header_json = json.dumps(header_data).encode('utf-8')
-        
-        # Length-prefix the header (varint encoding)
-        header_length = len(header_json)
-        length_bytes = self._encode_varint(header_length)
-        
-        return length_bytes + header_json
-    
-    def _create_car_block(self, cid_bytes: bytes, data: bytes) -> bytes:
-        """
-        Create CAR block bytes.
-        
-        Args:
-            cid_bytes: CID bytes for the block
-            data: Block data
-            
-        Returns:
-            Encoded CAR block bytes
-        """
-        # Block format: length(varint) + cid_length(varint) + cid + data
-        cid_length = len(cid_bytes)
-        block_length = len(self._encode_varint(cid_length)) + cid_length + len(data)
-        
-        length_bytes = self._encode_varint(block_length)
-        cid_length_bytes = self._encode_varint(cid_length)
-        
-        return length_bytes + cid_length_bytes + cid_bytes + data
-    
-    def _encode_varint(self, value: int) -> bytes:
-        """
-        Encode integer as varint bytes.
-        
-        Args:
-            value: Integer to encode
-            
-        Returns:
-            Varint-encoded bytes
-        """
-        result = []
-        while value >= 0x80:
-            result.append((value & 0x7F) | 0x80)
-            value >>= 7
-        result.append(value & 0x7F)
-        return bytes(result)
-    
-    async def store_add(self, data: bytes) -> str:
-        """
-        Store data and get a shard CID.
-        
-        This corresponds to the 'store/add' capability in Storacha.
-        
-        Args:
-            data: Raw bytes to store
-            
-        Returns:
-            Shard CID string
+            Response from store/add operation
             
         Raises:
-            StorachaError: If the store operation fails
+            StorachaUploadError: If space allocation fails
         """
-        if not self.config.space_did:
-            raise StorachaAuthError("space_did is required for store operations")
-        
-        # Create CAR file from data
-        car_data, content_cid = self._create_simple_car(data)
-        
-        # Prepare the store/add task
         tasks = [
             [
                 "store/add",
                 self.config.space_did,
                 {
-                    "car": car_data.hex(),  # Send as hex string
-                    "size": len(car_data)
+                    "link": {"/": car_cid},
+                    "size": car_size
                 }
             ]
         ]
         
         try:
-            response = await self._make_request("bridge", tasks)
+            response = await self._make_bridge_request(tasks)
             
-            # Extract shard CID from response
-            if "results" in response and len(response["results"]) > 0:
-                result = response["results"][0]
-                if "ok" in result:
-                    shard_cid = result["ok"].get("shard")
-                    if shard_cid:
-                        logger.info(f"Successfully stored data, shard CID: {shard_cid}")
-                        return shard_cid
+            if isinstance(response, list) and len(response) > 0:
+                result_item = response[0]
                 
-                # Handle error in result
-                if "error" in result:
-                    error_msg = result["error"]
-                    raise StorachaUploadError(f"Store failed: {error_msg}")
+                if 'p' in result_item and 'out' in result_item['p']:
+                    out = result_item['p']['out']
+                    if 'ok' in out:
+                        return out['ok']
+                    elif 'error' in out:
+                        error_msg = out['error']
+                        raise StorachaUploadError(f"store/add failed: {error_msg}")
             
-            raise StorachaUploadError("Unexpected response format")
+            raise StorachaUploadError(f"Unexpected store/add response format: {response}")
             
+        except StorachaError:
+            raise
         except Exception as e:
-            logger.error(f"Store operation failed: {e}")
-            raise StorachaUploadError(f"Store operation failed: {e}")
+            logger.error(f"store/add operation failed: {e}")
+            raise StorachaUploadError(f"store/add operation failed: {e}")
     
-    async def upload_add(self, content_cid: str, shard_cids: List[str]) -> bool:
+    async def _upload_car_to_s3(self, car_file_path: str, upload_url: str, headers: Dict[str, str]) -> None:
         """
-        Register an upload with content CID and associated shard CIDs.
-        
-        This corresponds to the 'upload/add' capability in Storacha.
+        Step 2: Upload CAR file to the provided S3 URL.
         
         Args:
-            content_cid: The content CID to register
-            shard_cids: List of shard CIDs that contain the content
-            
-        Returns:
-            True if successful
+            car_file_path: Path to the CAR file
+            upload_url: S3 upload URL
+            headers: Headers required for the upload
             
         Raises:
-            StorachaError: If the upload registration fails
+            StorachaUploadError: If S3 upload fails
         """
-        if not self.config.space_did:
-            raise StorachaAuthError("space_did is required for upload operations")
+        await self._ensure_session()
         
-        # Prepare the upload/add task
+        try:
+            async with aiofiles.open(car_file_path, 'rb') as f:
+                car_data = await f.read()
+            
+            async with self._session.put(
+                upload_url,
+                data=car_data,
+                headers=headers
+            ) as response:
+                
+                if response.status not in [200, 201]:
+                    error_text = await response.text()
+                    logger.error(f"S3 upload failed {response.status}: {error_text}")
+                    raise StorachaUploadError(f"S3 upload failed {response.status}: {error_text}")
+                
+                logger.info(f"Successfully uploaded CAR file to S3")
+                
+        except aiohttp.ClientError as e:
+            logger.error(f"S3 upload error: {e}")
+            raise StorachaUploadError(f"S3 upload error: {e}")
+    
+    async def _upload_add(self, content_cid: str, car_cid: str) -> Dict[str, Any]:
+        """
+        Step 3: Register the upload in the space.
+        
+        Args:
+            content_cid: CID of the original content
+            car_cid: CID of the CAR file
+            
+        Returns:
+            Response from upload/add operation
+            
+        Raises:
+            StorachaUploadError: If upload registration fails
+        """
         tasks = [
             [
                 "upload/add",
                 self.config.space_did,
                 {
-                    "root": content_cid,
-                    "shards": shard_cids
+                    "root": {"/": content_cid},
+                    "shards": [{"/": car_cid}]
                 }
             ]
         ]
         
         try:
-            response = await self._make_request("bridge", tasks)
+            response = await self._make_bridge_request(tasks)
             
-            # Check response
-            if "results" in response and len(response["results"]) > 0:
-                result = response["results"][0]
-                if "ok" in result:
-                    logger.info(f"Successfully registered upload: {content_cid}")
-                    return True
+            if isinstance(response, list) and len(response) > 0:
+                result_item = response[0]
                 
-                if "error" in result:
-                    error_msg = result["error"]
-                    raise StorachaUploadError(f"Upload registration failed: {error_msg}")
+                if 'p' in result_item and 'out' in result_item['p']:
+                    out = result_item['p']['out']
+                    if 'ok' in out:
+                        return out['ok']
+                    elif 'error' in out:
+                        error_msg = out['error']
+                        raise StorachaUploadError(f"upload/add failed: {error_msg}")
             
-            raise StorachaUploadError("Unexpected response format")
+            raise StorachaUploadError(f"Unexpected upload/add response format: {response}")
             
+        except StorachaError:
+            raise
         except Exception as e:
-            logger.error(f"Upload registration failed: {e}")
-            raise StorachaUploadError(f"Upload registration failed: {e}")
+            logger.error(f"upload/add operation failed: {e}")
+            raise StorachaUploadError(f"upload/add operation failed: {e}")
     
-    async def upload_file(self, file_path: str) -> UploadResult:
+    async def upload_data(self, data: bytes, filename: str = None) -> UploadResult:
         """
-        Upload a file to Storacha.
+        Upload data to Storacha following the complete flow.
         
-        This is a convenience method that combines store/add and upload/add.
-        
-        Args:
-            file_path: Path to the file to upload
-            
-        Returns:
-            UploadResult with content CID, shard CIDs, and size
-            
-        Raises:
-            StorachaError: If the upload fails
-        """
-        try:
-            # Read file data
-            async with aiofiles.open(file_path, 'rb') as f:
-                data = await f.read()
-            
-            return await self.upload_data(data)
-            
-        except IOError as e:
-            raise StorachaUploadError(f"Failed to read file {file_path}: {e}")
-    
-    async def upload_data(self, data: bytes) -> UploadResult:
-        """
-        Upload raw data to Storacha.
-        
-        This is a convenience method that combines store/add and upload/add.
+        This method implements the full Storacha upload process:
+        1. Create CAR file from data
+        2. store/add - Allocate space and get upload URL
+        3. PUT CAR file to S3 URL
+        4. upload/add - Register the upload
         
         Args:
             data: Raw bytes to upload
+            filename: Optional filename for the data
             
         Returns:
-            UploadResult with content CID, shard CIDs, and size
+            UploadResult containing CIDs and metadata
             
         Raises:
-            StorachaError: If the upload fails
+            StorachaUploadError: If upload fails at any step
         """
-        # Step 1: Store the data and get shard CID
-        shard_cid = await self.store_add(data)
+        if not self.config.space_did:
+            raise StorachaAuthError("space_did is required for upload operations")
         
-        # Step 2: Create content CID (for simplicity, using the same as shard for raw data)
-        _, content_cid = self._create_simple_car(data)
+        car_file_path = None
         
-        # Step 3: Register the upload
-        await self.upload_add(content_cid, [shard_cid])
+        try:
+            # Step 1: Create CAR file
+            logger.info(f"Creating CAR file for {len(data)} bytes")
+            car_file_path, content_cid, car_size = self._create_car_file(data, filename)
+            car_cid = self._get_car_cid(car_file_path)
+            
+            # Step 2: Allocate space (store/add)
+            logger.info(f"Allocating space for CAR file: {car_cid}")
+            store_result = await self._store_add(car_cid, car_size)
+            
+            # Check if we need to upload or if it's already stored
+            if store_result.get("status") == "done":
+                logger.info("File already exists in Storacha, skipping upload")
+            elif store_result.get("status") == "upload":
+                # Step 3: Upload CAR file to S3
+                upload_url = store_result["url"]
+                upload_headers = store_result["headers"]
+                
+                logger.info(f"Uploading CAR file to S3: {upload_url}")
+                await self._upload_car_to_s3(car_file_path, upload_url, upload_headers)
+            else:
+                raise StorachaUploadError(f"Unexpected store status: {store_result.get('status')}")
+            
+            # Step 4: Register upload (upload/add)
+            logger.info(f"Registering upload: content={content_cid}, shard={car_cid}")
+            upload_result = await self._upload_add(content_cid, car_cid)
+            
+            logger.info(f"✅ Upload complete! Content CID: {content_cid}")
+            
+            return UploadResult(
+                content_cid=content_cid,
+                shard_cid=car_cid,
+                size=len(data)
+            )
+            
+        except Exception as e:
+            logger.error(f"Upload failed: {e}")
+            raise StorachaUploadError(f"Upload failed: {e}")
         
-        return UploadResult(
-            content_cid=content_cid,
-            shard_cids=[shard_cid],
-            size=len(data)
-        )
+        finally:
+            # Clean up temporary CAR file
+            if car_file_path and os.path.exists(car_file_path):
+                try:
+                    os.unlink(car_file_path)
+                    logger.debug(f"Cleaned up temporary CAR file: {car_file_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to clean up CAR file {car_file_path}: {e}")
     
     async def list_uploads(self) -> List[Dict[str, Any]]:
         """
         List uploads in the space.
-        
-        This corresponds to the 'upload/list' capability in Storacha.
         
         Returns:
             List of upload records
@@ -453,82 +494,45 @@ class StorachaClient:
         ]
         
         try:
-            response = await self._make_request("bridge", tasks)
+            response = await self._make_bridge_request(tasks)
             
-            if "results" in response and len(response["results"]) > 0:
-                result = response["results"][0]
-                if "ok" in result:
-                    uploads = result["ok"].get("uploads", [])
-                    logger.info(f"Retrieved {len(uploads)} uploads")
-                    return uploads
+            if isinstance(response, list) and len(response) > 0:
+                result_item = response[0]
                 
-                if "error" in result:
-                    error_msg = result["error"]
-                    raise StorachaError(f"List uploads failed: {error_msg}")
+                if 'p' in result_item and 'out' in result_item['p']:
+                    out = result_item['p']['out']
+                    if 'ok' in out:
+                        uploads = out['ok'].get('results', [])
+                        logger.info(f"Found {len(uploads)} uploads")
+                        return uploads
+                    elif 'error' in out:
+                        error_msg = out['error']
+                        raise StorachaError(f"upload/list failed: {error_msg}")
             
-            raise StorachaError("Unexpected response format")
+            raise StorachaError(f"Unexpected upload/list response format: {response}")
             
+        except StorachaError:
+            raise
         except Exception as e:
-            logger.error(f"List uploads failed: {e}")
-            raise StorachaError(f"List uploads failed: {e}")
-
-
-# Utility functions for configuration management
-
-def create_config_from_env() -> StorachaConfig:
-    """
-    Create StorachaConfig from environment variables.
-    
-    Expected environment variables:
-    - STORACHA_AUTH_SECRET: X-Auth-Secret header value
-    - STORACHA_AUTH_TOKEN: Authorization header value  
-    - STORACHA_SPACE_DID: Space DID for operations
-    - STORACHA_BASE_URL: Base URL (optional, defaults to production)
-    
-    Returns:
-        StorachaConfig object
-        
-    Raises:
-        StorachaAuthError: If required environment variables are missing
-    """
-    import os
-    
-    auth_secret = os.getenv("STORACHA_AUTH_SECRET")
-    auth_token = os.getenv("STORACHA_AUTH_TOKEN") 
-    space_did = os.getenv("STORACHA_SPACE_DID")
-    base_url = os.getenv("STORACHA_BASE_URL", "https://up.storacha.network")
-    
-    if not auth_secret or not auth_token:
-        raise StorachaAuthError(
-            "Missing required environment variables: STORACHA_AUTH_SECRET and STORACHA_AUTH_TOKEN"
-        )
-    
-    return StorachaConfig(
-        base_url=base_url,
-        auth_secret=auth_secret,
-        auth_token=auth_token,
-        space_did=space_did
-    )
+            logger.error(f"list_uploads operation failed: {e}")
+            raise StorachaError(f"list_uploads operation failed: {e}")
 
 
 async def test_connection(config: StorachaConfig) -> bool:
     """
-    Test connection to Storacha API.
+    Test connection to Storacha service.
     
     Args:
-        config: StorachaConfig object
+        config: Storacha configuration
         
     Returns:
-        True if connection is successful
-        
-    Raises:
-        StorachaError: If connection fails
+        True if connection successful, False otherwise
     """
-    async with StorachaClient(config) as client:
-        try:
-            # Try to list uploads as a connection test
-            await client.list_uploads()
+    try:
+        async with StorachaClient(config) as client:
+            uploads = await client.list_uploads()
+            logger.info(f"✅ Connection successful! Found {len(uploads)} uploads")
             return True
-        except Exception as e:
-            logger.error(f"Connection test failed: {e}")
-            raise StorachaError(f"Connection test failed: {e}") 
+    except Exception as e:
+        logger.error(f"❌ Connection test failed: {e}")
+        return False 

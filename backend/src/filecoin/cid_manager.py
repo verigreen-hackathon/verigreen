@@ -17,7 +17,7 @@ import sqlite3
 
 import aiohttp
 import aiofiles
-from multihash import decode as multihash_decode, encode as multihash_encode, SHA2_256
+from multihash import decode as multihash_decode, encode as multihash_encode
 
 from .client import StorachaClient, StorachaConfig, StorachaError
 

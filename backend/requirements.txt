@@ -15,6 +15,9 @@ pydantic==2.5.3
 
 # Filecoin/Storacha integration
 # Will add specific packages later based on Storacha SDK
+aiohttp==3.9.1
+aiofiles==23.2.0
+py-multihash==2.0.1
 
 # Redis for caching
 redis==5.0.1
