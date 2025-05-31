@@ -1,0 +1,14 @@
+{
+  "name": "verigreen",
+  "version": "0.2.0",
+  "license": "MIT",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "yarn workspaces run dev",
+    "build": "yarn workspaces run build",
+    "test": "yarn workspaces run test"
+  }
+}
