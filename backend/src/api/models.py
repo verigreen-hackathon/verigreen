@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional
 from datetime import datetime
 import re
-from backend.src.config import GRID_CONFIG
+from config import GRID_CONFIG
 
 
 class GridPoint(BaseModel):

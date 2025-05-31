@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException, status, BackgroundTasks
-from backend.src.api.models import LandClaimRequest, LandClaimResponse, LandClaimError
-from backend.src.utils.validation import (
+from api.models import LandClaimRequest, LandClaimResponse, LandClaimError
+from utils.validation import (
     validate_grid_coordinates,
     grid_to_gps_coordinates,
     calculate_claim_area_km2,
     calculate_affected_tiles
 )
-from backend.src.utils.database import store_claim, get_claim, get_all_claims
+from utils.database import store_claim, get_claim, get_all_claims
 from processing.claim_processor import ClaimProcessor, ProcessingResult
 from sentinel.batang_toru_mapper import get_claim_download_config
 from datetime import datetime, timedelta
