@@ -1,4 +1,9 @@
 {
   "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode"
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "wake.compiler.solc.remappings": [
+    "@pythnetwork/=node_modules/@pythnetwork/",
+    "forge-std/=node_modules/foundry/lib/forge-std/",
+    "foundry/=node_modules/foundry/"
+  ]
 }
