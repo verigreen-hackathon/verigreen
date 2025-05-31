@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { TestUserData } from '@/src/types/user.model'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+
 
 export default function LoginPage() {
   const router = useRouter()
@@ -13,7 +15,7 @@ export default function LoginPage() {
   })
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [userData, setUserData] = useState<any>(null)
+  const [userData, setUserData] = useState<TestUserData | null>(null)
 
   useEffect(() => {
     const storedUserData = localStorage.getItem('userData')

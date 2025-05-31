@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { TestUserData } from '../types/user.model'
 
 export default function Home() {
   const router = useRouter()
-  const [userData, setUserData] = useState<any>(null)
+  const [userData, setUserData] = useState<TestUserData | null>(null)
 
   useEffect(() => {
     const storedUserData = localStorage.getItem('userData')
