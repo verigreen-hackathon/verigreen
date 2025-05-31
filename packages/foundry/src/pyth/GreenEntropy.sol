@@ -26,7 +26,6 @@ contract GreenEntropy is IEntropyConsumer {
       entropyProvider,
       userRandomNumber
     );
-    // Store the sequence number to identify the callback request
 
     sequenceNumbers[entropyProvider][sequenceNumber] = maxNumber;
 
@@ -46,7 +45,6 @@ contract GreenEntropy is IEntropyConsumer {
     address provider,
     bytes32 randomNumber
   ) internal override {
-    // Implement your callback logic here.
 
     if (sequenceNumbers[provider][sequenceNumber] == 0) {
         revert GreenErrors.InvalidSequenceNumber();
@@ -58,7 +56,6 @@ contract GreenEntropy is IEntropyConsumer {
 
   }
 
-  // Maps a random number into a range between minRange and maxRange (inclusive)
     function mapRandomNumber(
     bytes32 randomNumber,
     address entropyProvider,

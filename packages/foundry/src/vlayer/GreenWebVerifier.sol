@@ -5,23 +5,25 @@ import {GreenWebProofProver} from "./GreenWebProofProver.sol";
 import {Proof} from "vlayer-0.1.0/Proof.sol";
 import {Verifier} from "vlayer-0.1.0/Verifier.sol";
 
-import {ERC721} from "openzeppelin-contracts/token/ERC721/ERC721.sol";
+import {IVeriGreen} from '../interfaces/IVeriGreen.sol';
 
-contract WebProofVerifier is Verifier, ERC721 {
+import { GreenEvents } from '../shared/GreenEvents.sol';
+
+
+contract WebProofVerifier is Verifier{
     address public prover;
+    IVeriGreen public veriGreen;
 
-    constructor(address _prover) ERC721("TwitterNFT", "TNFT") {
+    constructor(address _prover, address _veriGreen) {
         prover = _prover;
+        veriGreen = IVeriGreen(_veriGreen);
     }
 
-    function verify(Proof calldata, string memory land_identifier, address account)
-        public
+    function verify(Proof calldata, uint256 forestId, address account)
+        external
         onlyVerified(prover, GreenWebProofProver.main.selector)
     {
-        uint256 tokenId = uint256(keccak256(abi.encodePacked(land_identifier)));
-        require(_ownerOf(tokenId) == address(0), "User has already minted a TwitterNFT");
-
-        _safeMint(account, tokenId);
+        veriGreen.verifyLand(account, forestId);
     }
 }
 
