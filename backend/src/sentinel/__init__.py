@@ -3,6 +3,10 @@ from .download import download_sentinel_imagery, validate_downloaded_data
 from .imagery import ImageryLoader, ImageryValidator, ImageryError, load_imagery_safely
 from .grid import GridCalculator, TileCoordinates, GridError, calculate_grid_for_imagery
 from .slicer import ImageSlicer, TileData, SlicingError, slice_imagery_file
+from .metadata import (
+    MetadataGenerator, TileMetadata, SourceImageryMetadata, MetadataError,
+    create_source_imagery_metadata, generate_tile_metadata
+)
 
 __all__ = [
     'download_sentinel_imagery', 
@@ -18,5 +22,11 @@ __all__ = [
     'ImageSlicer',
     'TileData',
     'SlicingError',
-    'slice_imagery_file'
+    'slice_imagery_file',
+    'MetadataGenerator',
+    'TileMetadata',
+    'SourceImageryMetadata',
+    'MetadataError',
+    'create_source_imagery_metadata',
+    'generate_tile_metadata'
 ] 

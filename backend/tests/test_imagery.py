@@ -183,8 +183,22 @@ class TestImageryLoader:
         
         loader = ImageryLoader(validate=False)
         
-        with pytest.raises(ImageryError, match="Could not find band B08"):
-            loader.load_sentinel2_bands(tmp_path, ['B04', 'B08'])
+        # Mock rasterio.open to simulate valid B04 file but missing B08
+        with patch('rasterio.open') as mock_open:
+            # Create a mock dataset for B04
+            mock_dataset = Mock()
+            mock_dataset.width = 1000
+            mock_dataset.height = 1000
+            mock_dataset.count = 1
+            mock_dataset.dtypes = [np.dtype('uint16')]
+            mock_dataset.crs = rasterio.crs.CRS.from_epsg(32633)
+            mock_dataset.bounds = rasterio.coords.BoundingBox(400000, 5000000, 410000, 5010000)
+            mock_dataset.transform = from_bounds(400000, 5000000, 410000, 5010000, 1000, 1000)
+            mock_dataset.nodata = 0
+            mock_open.return_value = mock_dataset
+            
+            with pytest.raises(ImageryError, match="Could not find band B08"):
+                loader.load_sentinel2_bands(tmp_path, ['B04', 'B08'])
     
     def test_validate_band_consistency_success(self, mock_dataset):
         """Test successful band consistency validation."""
@@ -249,10 +263,21 @@ class TestImageryLoader:
         assert bands_data['B08']['dataset'] is None
 
 
-def test_load_imagery_safely_success(tmp_path, mock_dataset):
+def test_load_imagery_safely_success(tmp_path):
     """Test safe imagery loading with success."""
     test_file = tmp_path / "test.tif"
     test_file.touch()
+    
+    # Create mock dataset for this test
+    mock_dataset = Mock()
+    mock_dataset.width = 1000
+    mock_dataset.height = 1000
+    mock_dataset.count = 1
+    mock_dataset.dtypes = [np.dtype('uint16')]
+    mock_dataset.crs = rasterio.crs.CRS.from_epsg(32633)
+    mock_dataset.bounds = rasterio.coords.BoundingBox(400000, 5000000, 410000, 5010000)
+    mock_dataset.transform = from_bounds(400000, 5000000, 410000, 5010000, 1000, 1000)
+    mock_dataset.nodata = 0
     
     with patch('rasterio.open', return_value=mock_dataset):
         with patch.object(ImageryValidator, 'validate_file_format', return_value=True):

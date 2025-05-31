@@ -286,8 +286,20 @@ class TestGridCalculator:
         assert len(tile.center_lat_lon) == 2
 
 
-def test_calculate_grid_for_imagery_convenience_function(large_imagery_metadata):
+def test_calculate_grid_for_imagery_convenience_function():
     """Test the convenience function for grid calculation."""
+    # Create large imagery metadata for this test
+    transform = from_bounds(400000, 5000000, 410000, 5010000, 1000, 1000)
+    
+    large_imagery_metadata = {
+        'width': 1000,
+        'height': 1000,
+        'transform': transform,
+        'bounds': BoundingBox(400000, 5000000, 410000, 5010000),
+        'crs': 'EPSG:32633',
+        'resolution': {'x': 10.0, 'y': 10.0}
+    }
+    
     tiles = calculate_grid_for_imagery(large_imagery_metadata, grid_size=3, tile_size=64)
     
     assert len(tiles) == 9  # 3x3 grid
