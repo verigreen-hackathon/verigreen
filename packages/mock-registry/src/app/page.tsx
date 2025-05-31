@@ -1,103 +1,119 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const router = useRouter()
+  const [userData, setUserData] = useState<any>(null)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  useEffect(() => {
+    const storedUserData = localStorage.getItem('userData')
+    if (storedUserData) {
+      try {
+        const parsedData = JSON.parse(storedUserData)
+        setUserData(parsedData)
+      } catch (e) {
+        console.error('Error parsing user data:', e)
+      }
+    }
+  }, [])
+
+  return (
+    <div className="space-y-8">
+      {/* Hero Section */}
+      <section className="bg-white rounded-lg shadow-md p-8">
+        {userData ? (
+          <>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              Welcome back, {userData.fullName}
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Access your land records and manage your property information through our secure government portal.
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Welcome to the Land Registry Portal</h1>
+            <p className="text-gray-600 mb-6">
+              Access official land records, property information, and registration services through our secure government portal.
+            </p>
+          </>
+        )}
+        
+        {/* Search Bar */}
+        <div className="max-w-2xl">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Enter property ID, address, or owner name..."
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <button className="px-6 py-2 bg-blue-900 text-white rounded-md hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              Search
+            </button>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </section>
+
+      {/* Services Grid */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-xl font-semibold text-gray-900 mb-3">Property Search</h3>
+          <p className="text-gray-600 mb-4">Search for property records, ownership history, and legal documents.</p>
+          <a href="/search" className="text-blue-900 hover:text-blue-800 font-medium">Search Now →</a>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-xl font-semibold text-gray-900 mb-3">Registration Services</h3>
+          <p className="text-gray-600 mb-4">Register new properties, update ownership, or file legal documents.</p>
+          <a href="/services" className="text-blue-900 hover:text-blue-800 font-medium">View Services →</a>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-xl font-semibold text-gray-900 mb-3">Document Verification</h3>
+          <p className="text-gray-600 mb-4">Verify the authenticity of land documents and certificates.</p>
+          <a href="/verify" className="text-blue-900 hover:text-blue-800 font-medium">Verify Now →</a>
+        </div>
+      </section>
+
+      {/* Announcements */}
+      <section className="bg-white rounded-lg shadow-md p-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Important Announcements</h2>
+        <div className="space-y-4">
+          <div className="border-l-4 border-blue-900 pl-4">
+            <h3 className="font-semibold text-gray-900">System Maintenance</h3>
+            <p className="text-gray-600">Scheduled maintenance on Saturday, 2:00 AM - 4:00 AM</p>
+          </div>
+          <div className="border-l-4 border-blue-900 pl-4">
+            <h3 className="font-semibold text-gray-900">New Online Services</h3>
+            <p className="text-gray-600">Digital property registration now available for all districts</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Actions for logged-in users */}
+      {userData && (
+        <section className="bg-white rounded-lg shadow-md p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button 
+              onClick={() => router.push('/my-properties')}
+              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
+            >
+              <h3 className="font-semibold text-gray-900">My Properties</h3>
+              <p className="text-gray-600">View and manage your registered properties</p>
+            </button>
+            <button 
+              onClick={() => router.push('/documents')}
+              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
+            >
+              <h3 className="font-semibold text-gray-900">My Documents</h3>
+              <p className="text-gray-600">Access your property documents and certificates</p>
+            </button>
+          </div>
+        </section>
+      )}
     </div>
-  );
+  )
 }
