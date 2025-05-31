@@ -2,8 +2,12 @@
 src = "src"
 out = "out"
 libs = ["lib", "dependencies"]
-fs_permissions = [{ access = "read", path = "./testdata"}]
 solc_version = "0.8.30"
+
+[[profile.default.fs_permissions]]
+access = "read"
+path = "./testdata"
+fs_permissions = [{ access = "read", path = "./testdata"}]
 
 [dependencies]
 "@openzeppelin-contracts" = "5.0.1"
