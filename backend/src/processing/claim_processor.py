@@ -17,12 +17,13 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..config import PROCESSED_DATA_DIR
-from ..sentinel.download import get_or_download_sentinel_for_claim
-from ..sentinel.slicer import ImageSlicer, TileData
-from ..sentinel.batang_toru_mapper import get_claim_download_config
-from ..ndvi.calculator import NDVICalculator, NDVIResult
-from ..ndvi.statistics import NDVIStatistics
+# Fixed imports - using absolute paths
+from config import PROCESSED_DATA_DIR
+from sentinel.download import get_or_download_sentinel_for_claim
+from sentinel.slicer import ImageSlicer, TileData
+from sentinel.batang_toru_mapper import get_claim_download_config
+from ndvi.calculator import NDVICalculator, NDVIResult
+from ndvi.statistics import NDVIStatistics
 
 logger = logging.getLogger(__name__)
 

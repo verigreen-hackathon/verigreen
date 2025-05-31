@@ -13,8 +13,8 @@ from botocore import UNSIGNED
 from botocore.config import Config
 import rasterio
 
-from ..config import SENTINEL_DATA_DIR
-from .batang_toru_mapper import batang_toru_mapper, get_claim_download_config
+from config import SENTINEL_DATA_DIR
+from sentinel.batang_toru_mapper import batang_toru_mapper, get_claim_download_config
 
 logger = logging.getLogger(__name__)
 

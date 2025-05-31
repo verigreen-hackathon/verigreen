@@ -8,9 +8,10 @@ import math
 from typing import Dict, List, Tuple, Optional, NamedTuple
 from rasterio.coords import BoundingBox
 
-from ..utils.validation import grid_to_gps_coordinates
-from .grid import TileCoordinates, GridCalculator
-from ..config import GRID_CONFIG
+# Fixed imports - using absolute paths
+from utils.validation import grid_to_gps_coordinates
+from sentinel.grid import TileCoordinates, GridCalculator
+from config import GRID_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -208,9 +209,9 @@ class BatangToruGridMapper:
         if not all(0 <= coord <= 9 for coord in [southwest_x, southwest_y, northeast_x, northeast_y]):
             return False, "Grid coordinates must be between 0 and 9"
         
-        # Check that northeast is actually northeast of southwest
-        if northeast_x <= southwest_x or northeast_y <= southwest_y:
-            return False, "Northeast corner must be northeast of southwest corner"
+        # Check that northeast is actually northeast of southwest (allow single cells)
+        if northeast_x < southwest_x or northeast_y < southwest_y:
+            return False, "Northeast corner cannot be southwest of southwest corner"
         
         # Get GPS coordinates
         gps_coords = self.batang_toru_area_to_gps(southwest_x, southwest_y, northeast_x, northeast_y)

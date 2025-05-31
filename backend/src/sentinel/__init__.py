@@ -1,28 +1,25 @@
-"""Sentinel-2 data acquisition module."""
-from .download import download_sentinel_imagery, validate_downloaded_data
-from .imagery import ImageryLoader, ImageryValidator, ImageryError, load_imagery_safely
-from .grid import GridCalculator, TileCoordinates, GridError, calculate_grid_for_imagery
-from .slicer import ImageSlicer, TileData, SlicingError, slice_imagery_file
-from .metadata import (
+"""Sentinel module for satellite data processing."""
+
+# Fixed imports - using absolute paths  
+from sentinel.download import download_sentinel_imagery, validate_downloaded_data
+from sentinel.grid import GridCalculator, TileCoordinates
+from sentinel.slicer import ImageSlicer
+from sentinel.imagery import ImageryLoader, ImageryValidator, ImageryError, load_imagery_safely
+from sentinel.metadata import (
     MetadataGenerator, TileMetadata, SourceImageryMetadata, MetadataError,
     create_source_imagery_metadata, generate_tile_metadata
 )
 
 __all__ = [
-    'download_sentinel_imagery', 
-    'validate_downloaded_data',
+    'download_sentinel_imagery',
+    'validate_downloaded_data', 
+    'GridCalculator',
+    'TileCoordinates',
+    'ImageSlicer',
     'ImageryLoader',
     'ImageryValidator', 
     'ImageryError',
     'load_imagery_safely',
-    'GridCalculator',
-    'TileCoordinates',
-    'GridError',
-    'calculate_grid_for_imagery',
-    'ImageSlicer',
-    'TileData',
-    'SlicingError',
-    'slice_imagery_file',
     'MetadataGenerator',
     'TileMetadata',
     'SourceImageryMetadata',
