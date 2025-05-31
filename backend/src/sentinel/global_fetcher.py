@@ -14,6 +14,7 @@ import boto3
 from botocore import UNSIGNED
 from botocore.config import Config
 import rasterio
+import mgrs
 
 from config import SENTINEL_DATA_DIR
 from sentinel.grid import GlobalGridCalculator, GlobalTileCoordinates
@@ -41,7 +42,8 @@ class GlobalSentinelFetcher:
         self.config = GLOBAL_SENTINEL_CONFIG
         self.grid_calculator = GlobalGridCalculator()
         self.s3_client = self._get_s3_client()
-        logger.info("Initialized GlobalSentinelFetcher for worldwide coverage")
+        self.mgrs_converter = mgrs.MGRS()
+        logger.info("Initialized GlobalSentinelFetcher for worldwide coverage with proper MGRS")
     
     def _get_s3_client(self):
         """Create an S3 client for accessing Sentinel-2 public bucket."""
@@ -49,55 +51,80 @@ class GlobalSentinelFetcher:
     
     def coordinates_to_mgrs_tiles(self, bounding_box: List[float]) -> List[str]:
         """
-        Convert global coordinates to MGRS tile identifiers.
+        Convert global coordinates to MGRS tile identifiers using proper MGRS library.
         
         Args:
             bounding_box: [west, south, east, north] in decimal degrees
             
         Returns:
             List of MGRS tile identifiers covering the area
-            
-        Note:
-            This is a simplified implementation. For production, use libraries
-            like pyproj or mgrs for accurate MGRS tile calculation.
         """
         west, south, east, north = bounding_box
         
-        # Simplified MGRS tile calculation
-        # Real implementation would use proper geodetic calculations
-        
-        # Calculate center point
-        center_lat = (north + south) / 2
-        center_lon = (east + west) / 2
-        
-        # Calculate UTM zone (simplified)
-        utm_zone = int((center_lon + 180) / 6) + 1
-        
-        # Determine hemisphere and latitude band
-        if center_lat >= 0:
-            hemisphere = 'N'
-            # Latitude bands for northern hemisphere (simplified)
-            lat_bands = 'NPQRSTUVWX'
-            lat_band_idx = min(int((center_lat + 80) / 8), len(lat_bands) - 1)
-            lat_band = lat_bands[lat_band_idx]
-        else:
-            hemisphere = 'S'
-            # Latitude bands for southern hemisphere (simplified)
-            lat_bands = 'MLKJHGFED'
-            lat_band_idx = min(int((80 + center_lat) / 8), len(lat_bands) - 1)
-            lat_band = lat_bands[lat_band_idx]
-        
-        # Grid square (simplified - using center point)
-        # In real MGRS, this would be calculated based on 100km squares
-        grid_squares = ['GA', 'GB', 'GC', 'GD', 'GE', 'GF', 'GG', 'GH', 'GJ', 'GK']
-        grid_square_idx = int((center_lon % 6) / 0.6) % len(grid_squares)
-        grid_square = grid_squares[grid_square_idx]
-        
-        # Construct MGRS tile ID
-        mgrs_tile = f"{utm_zone:02d}{lat_band}{grid_square}"
-        
-        # For simplicity, return single tile. Production would calculate all overlapping tiles
-        return [mgrs_tile]
+        try:
+            # Calculate multiple sample points across the bounding box
+            sample_points = []
+            
+            # Sample points: corners + center
+            sample_points.extend([
+                (south, west),    # SW corner
+                (south, east),    # SE corner  
+                (north, west),    # NW corner
+                (north, east),    # NE corner
+                ((south + north) / 2, (west + east) / 2)  # Center
+            ])
+            
+            # For larger areas, add more sample points
+            lat_range = north - south
+            lon_range = east - west
+            if lat_range > 1.0 or lon_range > 1.0:
+                # Add mid-points
+                mid_lat = (south + north) / 2
+                mid_lon = (west + east) / 2
+                sample_points.extend([
+                    (south, mid_lon),    # S mid
+                    (north, mid_lon),    # N mid
+                    (mid_lat, west),     # W mid  
+                    (mid_lat, east),     # E mid
+                ])
+            
+            mgrs_tiles = set()
+            
+            for lat, lon in sample_points:
+                try:
+                    # Convert lat/lon to MGRS
+                    mgrs_coord = self.mgrs_converter.toMGRS(lat, lon, MGRSPrecision=0)
+                    
+                    # Extract the tile ID (first 5 characters: zone + band + square)
+                    if len(mgrs_coord) >= 5:
+                        tile_id = mgrs_coord[:5]
+                        mgrs_tiles.add(tile_id)
+                        logger.debug(f"Point ({lat:.3f}, {lon:.3f}) -> MGRS: {mgrs_coord} -> Tile: {tile_id}")
+                
+                except Exception as e:
+                    logger.debug(f"MGRS conversion failed for ({lat}, {lon}): {e}")
+                    continue
+            
+            result = list(mgrs_tiles)
+            logger.info(f"Bounding box {bounding_box} covers MGRS tiles: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"MGRS calculation failed for {bounding_box}: {e}")
+            # Fallback to center point only
+            try:
+                center_lat = (north + south) / 2
+                center_lon = (east + west) / 2
+                mgrs_coord = self.mgrs_converter.toMGRS(center_lat, center_lon, MGRSPrecision=0)
+                if len(mgrs_coord) >= 5:
+                    fallback_tile = mgrs_coord[:5]
+                    logger.warning(f"Using fallback MGRS tile: {fallback_tile}")
+                    return [fallback_tile]
+            except:
+                pass
+            
+            logger.error("Complete MGRS calculation failure - no tiles identified")
+            return []
     
     def construct_s3_path(self, mgrs_tile: str, band: str, date: str) -> str:
         """
