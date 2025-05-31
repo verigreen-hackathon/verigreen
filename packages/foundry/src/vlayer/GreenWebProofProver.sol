@@ -11,17 +11,22 @@ contract GreenWebProofProver is Prover {
     using WebProofLib for WebProof;
     using WebLib for Web;
 
-    string dataUrl = "https://api.x.com/1.1/account/settings.json";
+    // Mock government land registry API endpoint
+    string dataUrl = "https://api.landrecords.gov/v1/ownership/verify";
 
     function main(WebProof calldata webProof, address account)
         public
         view
-        returns (Proof memory, string memory, address)
+        returns (Proof memory, string memory, string memory, uint256, address)
     {
+        // Verify the web proof against the expected government URL
         Web memory web = webProof.verify(dataUrl);
 
-        string memory land_identifier = web.jsonGetString("land_identifier");
+        // Extract land ownership data from the verified web response
+        string memory ownerName = web.jsonGetString("owner.name");
+        string memory landId = web.jsonGetString("property.id");
+        uint256 landPortion = web.jsonGetUint("property.portion_sqm");
 
-        return (proof(), land_identifier, account);
+        return (proof(), ownerName, landId, landPortion, account);
     }
 }
