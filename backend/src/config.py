@@ -25,8 +25,8 @@ RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # API Configuration
-API_HOST = os.getenv("API_HOST", "0.0.0.0")
-API_PORT = int(os.getenv("API_PORT", "8000"))
+API_HOST = "0.0.0.0"
+API_PORT = 8000
 
 # Redis Configuration
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -44,6 +44,27 @@ SENTINEL_DATA_DIR.mkdir(parents=True, exist_ok=True)
 STORACHA_API_KEY = os.getenv("STORACHA_API_KEY")
 STORACHA_API_URL = os.getenv("STORACHA_API_URL", "https://api.storacha.network")
 
+# Predefined 10x10 Grid Coverage Area
+# This defines the fixed satellite coverage area where users can claim land
+GRID_CONFIG = {
+    "total_tiles": 100,  # 10x10 grid
+    "tile_size_meters": 640,  # Each tile is 640m x 640m
+    "total_area_km": 6.4,  # Total coverage: 6.4km x 6.4km
+    
+    # Grid boundaries (example coordinates - update with your actual coverage area)
+    "boundaries": {
+        "north": 50.1,      # Northern boundary of your grid
+        "south": 50.0424,   # Southern boundary (approx 6.4km south)
+        "east": 14.5,       # Eastern boundary of your grid  
+        "west": 14.4088     # Western boundary (approx 6.4km west)
+    }
+}
+
+# Land Claim Validation
+CLAIM_VALIDATION = {
+    "min_claim_area_km2": 0.001,    # Minimum 1000 m² 
+    "max_claim_area_km2": 10.0      # Maximum 10 km² (allow up to ~6 grid cells)
+}
 
 def get_config_summary() -> dict:
     """Get a summary of the current configuration."""
