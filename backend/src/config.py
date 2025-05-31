@@ -51,12 +51,13 @@ GRID_CONFIG = {
     "tile_size_meters": 640,  # Each tile is 640m x 640m
     "total_area_km": 6.4,  # Total coverage: 6.4km x 6.4km
     
-    # Grid boundaries (example coordinates - update with your actual coverage area)
+    # Grid boundaries - Batang Toru Ecosystem, Sumatra, Indonesia
+    # Center: 1.2° N, 99.2° E (Tapanuli orangutan habitat)
     "boundaries": {
-        "north": 50.1,      # Northern boundary of your grid
-        "south": 50.0424,   # Southern boundary (approx 6.4km south)
-        "east": 14.5,       # Eastern boundary of your grid  
-        "west": 14.4088     # Western boundary (approx 6.4km west)
+        "north": 1.232,     # Northern boundary (~3.2km north of center)
+        "south": 1.168,     # Southern boundary (~3.2km south of center)
+        "east": 99.232,     # Eastern boundary (~3.2km east of center)
+        "west": 99.168      # Western boundary (~3.2km west of center)
     }
 }
 
