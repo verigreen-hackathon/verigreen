@@ -4,6 +4,6 @@ import { SubmissionsController } from '../controllers/submission.controller'
 const router = Router()
 const submissionController = new SubmissionsController()
 
-router.post('/submissions', (req, res) => submissionController.getWalletSubmissions(req, res))
+router.get('/submissions', (req, res) => submissionController.getWalletSubmissions(req, res))
 
 export default router

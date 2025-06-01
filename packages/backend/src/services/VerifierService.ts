@@ -3,7 +3,7 @@ import { Tile, VerifierResponse } from '../types/verifier.types'
 
 export class VerifierService {
   async getTiles(bounding_box: number[], wallet_address: string) {
-    const response = await axios.post<VerifierResponse>((process.env.VERIFIER_URL as string) + '/verify', {
+    const response = await axios.post<VerifierResponse>(process.env.VERIFIER_URL as string, {
       bounding_box,
       wallet_address,
     })
