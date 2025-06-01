@@ -22,4 +22,43 @@ model ContractEvent {
   @@index([blockNumber])
   @@index([transactionHash])
   @@index([timestamp])
-} 
+}
+
+model Claim {
+  id           String  @id @default(auto()) @map("_id") @db.ObjectId
+  user_address String
+  coordinates  Float[]
+  forest_id    String
+}
+
+model Submission {
+  id                    String  @id @default(auto()) @map("_id") @db.ObjectId
+  user_address          String
+  coordinates           Float[]
+  selectedTiles         Int[]
+  tileHash              String
+  valid                 Boolean
+  transactionHash       String
+  generatedRandomNumber Int
+
+  verifierResponse   VerifierResponse @relation(fields: [verifierResponseId], references: [id])
+  verifierResponseId String           @db.ObjectId
+}
+
+model VerifierResponse {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  forest_grid     Tile[]
+  filecoin_cid    String
+  processing_time String
+  timestamp       String
+  Submission      Submission[]
+}
+
+type Tile {
+  tile_id      Int
+  x            Int
+  y            Int
+  health_score Float
+  ndvi         Float
+  coordinates  Float[]
+}

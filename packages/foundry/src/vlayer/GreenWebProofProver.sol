@@ -16,12 +16,16 @@ contract GreenWebProofProver is Prover {
     function main(WebProof calldata webProof, address account)
         public
         view
-        returns (Proof memory, string memory, address)
+        returns (Proof memory, string memory, bytes memory, address)
     {
         Web memory web = webProof.verify(dataUrl);
 
-        string memory land_identifier = web.jsonGetString("land_identifier");
+        string memory forest_id = web.jsonGetString("forest_id");
+        string memory coordinate1 = web.jsonGetString("coordinate1");
+        string memory coordinate2 = web.jsonGetString("coordinate2");
+        string memory coordinate3 = web.jsonGetString("coordinate3");
+        string memory coordinate4 = web.jsonGetString("coordinate4");
 
-        return (proof(), land_identifier, account);
+        return (proof(), forest_id, abi.encode(coordinate1, coordinate2, coordinate3, coordinate4), account);
     }
 }

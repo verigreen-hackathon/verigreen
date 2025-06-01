@@ -17,3 +17,7 @@ remappings_generate = false
 # whether soldeer re-generates all remappings when installing, updating or uninstalling deps
 remappings_regenerate = false
 
+
+[rpc_endpoints]
+optimism-sepolia = "https://sepolia.optimism.io"
+ 
