@@ -4,3 +4,6 @@
 [submodule "packages/foundry/lib/openzeppelin-contracts"]
 	path = packages/foundry/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "packages/verigreenWebProof"]
+	path = packages/verigreenWebProof
+	url = https://github.com/verigreen-hackathon/verigreenWebProof.git
