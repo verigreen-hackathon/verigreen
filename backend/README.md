@@ -1,6 +1,35 @@
 # VeriGreen Backend
 
-Backend services for the VeriGreen decentralized forest conservation protocol.
+Advanced satellite imagery processing and NDVI analysis for carbon verification on blockchain.
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.8+
+- Node.js 16+ (for Storacha integration)
+- Git
+
+### Installation
+
+```bash
+# Clone and setup
+git clone <repository-url>
+cd verigreen/backend
+pip install -r requirements.txt
+```
+
+### Storacha (IPFS) Integration Setup
+
+For decentralized storage of satellite data and NDVI analysis results:
+
+**📋 [Complete Storacha Setup Guide](STORACHA_QUICKSTART.md)**
+
+Quick test after setup:
+
+```bash
+python3 test_storacha_setup.py
+```
 
 ## Overview
 

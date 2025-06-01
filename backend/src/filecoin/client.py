@@ -69,17 +69,18 @@ def create_config_from_env() -> StorachaConfig:
     Raises:
         StorachaAuthError: If required environment variables are missing
     """
-    auth_secret = os.getenv("STORACHA_AUTH_SECRET")
-    auth_token = os.getenv("STORACHA_AUTH_TOKEN")
+    # Try UCAN variables first (new format), fall back to old names for compatibility
+    auth_secret = os.getenv("STORACHA_UCAN_SECRET") or os.getenv("STORACHA_AUTH_SECRET")
+    auth_token = os.getenv("STORACHA_UCAN_TOKEN") or os.getenv("STORACHA_AUTH_TOKEN")
     space_did = os.getenv("STORACHA_SPACE_DID")
     base_url = os.getenv("STORACHA_BASE_URL", "https://up.storacha.network")
     
     if not all([auth_secret, auth_token, space_did]):
         missing = []
         if not auth_secret:
-            missing.append("STORACHA_AUTH_SECRET")
+            missing.append("STORACHA_UCAN_SECRET/STORACHA_AUTH_SECRET")
         if not auth_token:
-            missing.append("STORACHA_AUTH_TOKEN")
+            missing.append("STORACHA_UCAN_TOKEN/STORACHA_AUTH_TOKEN")
         if not space_did:
             missing.append("STORACHA_SPACE_DID")
         
