@@ -68,8 +68,8 @@ export default function LoginPage() {
       localStorage.setItem('userData', JSON.stringify(userDataWithFullName))
       setUserData(userDataWithFullName)
 
-      // Redirect to home page on successful login
-      router.push('/')
+      // Redirect to land page on successful login
+      router.push('/land/1')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during login')
     } finally {
@@ -99,7 +99,7 @@ export default function LoginPage() {
           </div>
           <div className="mt-6 text-center">
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/land/1')}
               className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-900 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Go to Dashboard
