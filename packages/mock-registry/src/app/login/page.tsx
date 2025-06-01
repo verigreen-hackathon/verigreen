@@ -13,7 +13,7 @@ export default function LoginPage() {
   })
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [userData, setUserData] = useState<any>(null)
+  const [userData, setUserData] = useState(null)
 
   useEffect(() => {
     const storedUserData = localStorage.getItem('userData')
