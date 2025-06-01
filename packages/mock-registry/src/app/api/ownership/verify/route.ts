@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Add request tracking (for vlayer verification)
+    // Add request tracking (for verification purposes)
     const response = {
       ...record,
       request_info: {

@@ -262,14 +262,14 @@ export default function Home() {
               </div>
               <div className="text-right">
                 {proofStatus === 'idle' && (
-                  <button
+                <button
                     onClick={generateVlayerProof}
                     disabled={!landRecord || loading}
                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                  >
+                >
                     Generate Proof
-                  </button>
-                )}
+                </button>
+              )}
                 {proofStatus === 'generating' && (
                   <div className="flex items-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
