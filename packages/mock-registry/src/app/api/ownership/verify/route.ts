@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const landRecords = [
   {
     owner: {
-      name: "Alice Johnson",
+      name: "AliceJohnson",
       id: "GOV123456789",
       email: "alice.johnson@email.com",
       phone: "+1-555-0123"
