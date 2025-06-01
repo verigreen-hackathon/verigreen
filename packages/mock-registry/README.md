@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🧪 VeriGreen Mock Registry
 
-## Getting Started
+The **Mock Registry** is a local development and simulation tool used to emulate external registry services during VeriGreen testing.
 
-First, run the development server:
+It allows developers to:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Simulate registry lookups
+- Mock contract data responses
+- Run full-stack integration flows without relying on live infrastructure
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This is useful for local development, automated testing, and frontend/backend interface validation.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🖥 Scripts
 
-## Learn More
+The following scripts are available:
 
-To learn more about Next.js, take a look at the following resources:
+- `dev` – Runs the app in development mode on port 3003
+- `build` – Compiles the Next.js application for production
+- `start` – Runs the production build on port 3003
+- `lint` – Runs the linter on the codebase
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🧱 Tech Stack
 
-## Deploy on Vercel
+- **Next.js** – React framework for frontend and API routes
+- **TypeScript** – For static typing and developer tooling
+- **Mock APIs** – Used to replicate behaviors of real registries
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🌐 Usage Context
+
+This package is **not intended for production**. It should only be used in:
+
+- Local development environments
+- Testing pipelines
+- Staging simulations
+
+---
+
+## 🧩 Integration
+
+The Mock Registry connects with other VeriGreen components such as:
+
+- The web app (to simulate verification flows)
+- The backend (for API mocking)
+- Smart contract testing (mocking registry calls if needed)
+
+This helps decouple frontend/backend development from live chain dependencies and third-party APIs.
+
+---
+
+If you need a real registry or are deploying to production, this package should be replaced with the actual service integration.
