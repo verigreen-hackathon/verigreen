@@ -1,24 +1,51 @@
-# Nexth
+# 🌱 VeriGreen Web App
 
-A Next.js + Ethereum starter kit to quickly ship Web3 Apps ⚡
+This is the **frontend application** for the VeriGreen platform, built using [Next.js](https://nextjs.org/) and integrated with **Wagmi**, **wallet-based auth**, and blockchain interactions.
 
-## Features ✅
+It serves as the main interface for:
 
-- [Next.js](https://nextjs.org/docs)
-- [viem](https://viem.sh/)
-- [wagmi](https://wagmi.sh/)
-- [Web3Modal from WalletConnect](https://docs.walletconnect.com/)
-- [Sign-In with Ethereum](https://www.login.xyz/)
-- [Hardhat](https://hardhat.org/)
-- [DaisyUI](https://chakra-ui.com/)
+- Landowners (to claim land tiles, view NDVI metrics, and receive rewards)
+- General users exploring climate impact data
 
-## Developer Experience 🧰
+---
 
-- [TypeScript](https://www.typescriptlang.org/)
-- [eslint](https://eslint.org/)
-- [prettier](https://prettier.io/)
-- [Husky](https://typicode.github.io/husky/)
+## 🚀 Getting Started
 
-### Smart Contracts
+### 📦 Install dependencies
 
-If you want to add smart contracts to your project, check out the docs at [hardhat folder](./hardhat) or [foundry folder](./foundry).
+At the root of the monorepo:
+
+```bash
+yarn install
+```
+
+▶️ Run in development mode
+
+```bash
+yarn dev
+```
+
+This will start the app at http://localhost:3002
+
+### 🔧 Available Scripts
+
+Script Description
+`yarn dev` Runs the app in development mode on port 3002
+`yarn build` Builds the production version of the app
+`yarn start` Starts the built app on port 3002
+`yarn lint` Runs ESLint with auto-fixing enabled
+`yarn wagmi` Generates Wagmi hooks from ABI definitions
+
+Make sure your backend and smart contract layers are running (if needed) for full functionality.
+
+### 🧪 Tech Stack
+
+##### Next.js
+
+##### Wagmi
+
+##### Viem
+
+##### Tailwind CSS
+
+##### Ethers.js
