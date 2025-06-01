@@ -92,3 +92,19 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.custom-slide-sheet {
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important,
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  will-change: transform, opacity;
+  border-left: none !important;
+}
+.custom-slide-sheet[data-state='open'] {
+  transform: translateX(0) !important;
+  opacity: 1 !important;
+}
+.custom-slide-sheet[data-state='closed'] {
+  transform: translateX(100%) !important;
+  opacity: 0 !important;
+}
