@@ -3,7 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+interface UserData {
+  fullName: string;
+  email: string;
+  token: string;
+  id?: string;
+  role?: string;
+  loginTime?: string;
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -13,13 +20,13 @@ export default function LoginPage() {
   })
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [userData, setUserData] = useState(null)
+  const [userData, setUserData] = useState<UserData | null>(null)
 
   useEffect(() => {
     const storedUserData = localStorage.getItem('userData')
     if (storedUserData) {
       try {
-        const parsedData = JSON.parse(storedUserData)
+        const parsedData = JSON.parse(storedUserData) as UserData
         setUserData(parsedData)
       } catch (e) {
         console.error('Error parsing user data:', e)
@@ -33,7 +40,7 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${BASE_URL}/login`, {
+      const response = await fetch('/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,9 +58,15 @@ export default function LoginPage() {
         throw new Error(data.message || 'Login failed')
       }
 
+      // Ensure we have a fullName field
+      const userDataWithFullName = {
+        ...data,
+        fullName: data.fullName || data.name || 'User'
+      }
+
       localStorage.setItem('authToken', data.token)
-      localStorage.setItem('userData', JSON.stringify(data))
-      setUserData(data)
+      localStorage.setItem('userData', JSON.stringify(userDataWithFullName))
+      setUserData(userDataWithFullName)
 
       // Redirect to home page on successful login
       router.push('/')
@@ -78,7 +91,7 @@ export default function LoginPage() {
         <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
           <div>
             <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-              Welcome, {userData.fullName}
+              Welcome, {userData.fullName || 'User'}
             </h2>
             <p className="mt-2 text-center text-sm text-gray-600">
               You are already logged in
@@ -151,6 +164,16 @@ export default function LoginPage() {
                 placeholder="Enter your password"
                 disabled={isLoading}
               />
+            </div>
+          </div>
+
+          {/* Demo Credentials */}
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+            <h4 className="text-sm font-medium text-blue-900 mb-2">Demo Credentials</h4>
+            <div className="text-xs text-blue-800 space-y-1">
+              <p><strong>Alice Johnson:</strong> alice.johnson@email.com / password123</p>
+              <p><strong>Bob Smith:</strong> bob.smith@email.com / password123</p>
+              <p><strong>Demo User:</strong> demo@example.com / demo</p>
             </div>
           </div>
 
