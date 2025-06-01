@@ -106,7 +106,7 @@ export default function Home() {
               <ul className="space-y-1 text-gray-600">
                 <li>• Springfield Department of Land Records</li>
                 <li>• State Government Property Database</li>
-                <li>• County Assessor's Office Integration</li>
+                <li>• County Assessor&apos;s Office Integration</li>
                 <li>• Municipal Planning Department</li>
               </ul>
             </div>
