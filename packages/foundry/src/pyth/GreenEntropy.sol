@@ -61,8 +61,8 @@ contract GreenEntropy is IEntropyConsumer {
     address entropyProvider,
     uint64 sequenceNumber
     ) internal view returns (uint256) {
-    uint256 range = uint256(sequenceNumbers[entropyProvider][sequenceNumber] + 1);
-    return uint256(uint256(randomNumber) % range);
+      uint256 range = uint256(sequenceNumbers[entropyProvider][sequenceNumber] + 1);
+      return uint256(uint256(randomNumber) % range);
     }
  
   // This method is required by the IEntropyConsumer interface.

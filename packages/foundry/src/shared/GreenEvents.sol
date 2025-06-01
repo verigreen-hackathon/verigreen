@@ -7,6 +7,6 @@ library GreenEvents {
     event RandomNumberGenerated(uint64 indexed sequenceNumber, uint256 randomNumber);
 
     // VeriGreen
-    event LandClaimed(address indexed owner, uint256 indexed forestId);
-    event LandTilesVerified(address indexed owner, uint256 indexed forestId, bytes32 tilesHash);
+    event LandClaimed(address indexed owner, string indexed forestId, string coordinate1, string coordinate2, string coordinate3, string coordinate4 );
+    event LandTilesVerified(address indexed owner, string forestId, bytes32 tilesHash);
 }

@@ -11,16 +11,15 @@ import { Ownable } from "openzeppelin-contracts/access/Ownable.sol";
 
 contract VeriGreen is IVeriGreen, Ownable {
     // user address => forest id => verified tiles hash
-    mapping(address => mapping(uint256 => bytes32)) userLands;
-    mapping(address => uint256) verifiedUserLands;
+    mapping(address => mapping(bytes32 => bytes32)) verifiedUserLandsWithTiles;
+    mapping(address => string) userLands;
 
     address public greenVerifier;
     IVeriGreenToken public greenToken;
 
     uint256 public rewardAmount;
 
-    constructor(address greenVerifierAddress, address initialOwner) Ownable(initialOwner){
-        greenVerifier = greenVerifierAddress;
+    constructor(address initialOwner) Ownable(initialOwner){
     }
 
     modifier onlyVerifier() {
@@ -34,25 +33,37 @@ contract VeriGreen is IVeriGreen, Ownable {
         greenToken = IVeriGreenToken(greenTokenAddress_);
     }
 
+    function setVerifierAddress(address verifierAddress_) external onlyOwner {
+        greenVerifier = verifierAddress_;
+    }
+
     function setRewardAmount(uint256 rewardAmount_) external onlyOwner {
         rewardAmount = rewardAmount_;
     }
 
-    function verifyLand(address account, uint256 forestId) public onlyVerifier {
-        verifiedUserLands[account] = forestId;
+    function verifyLand(address account, string memory forestId, string memory coordinate1, string memory coordinate2, string memory coordinate3, string memory coordinate4) public onlyVerifier {
+        userLands[account] = forestId; 
         
-        emit GreenEvents.LandClaimed(account, forestId);
+        emit GreenEvents.LandClaimed(account, forestId, coordinate1, coordinate2, coordinate3, coordinate4);
     }
 
-    function verifyTilesInLand(address account, uint256 forestId, bytes32 tilesHash) public {
-        if(verifiedUserLands[account] != forestId) {
+    function verifyTilesInLand(address account, string memory forestId, bytes32 tilesHash) public onlyOwner {
+        if(!compareStrings(userLands[account], forestId) ) {
             revert GreenErrors.LandIsNotVerified();
         }
         
-        userLands[account][forestId] = tilesHash;
+        verifiedUserLandsWithTiles[account][hashString(forestId)] = tilesHash;
 
         greenToken.mint(account, rewardAmount);
         
         emit GreenEvents.LandTilesVerified(account, forestId, tilesHash);
+    }
+
+    function compareStrings(string memory _a, string memory _b) public pure returns(bool) {
+        return keccak256(abi.encodePacked(_a)) == keccak256(abi.encodePacked(_b));
+    }
+
+    function hashString(string memory _a) public pure returns(bytes32) {
+        return keccak256(abi.encodePacked(_a));
     }
 }

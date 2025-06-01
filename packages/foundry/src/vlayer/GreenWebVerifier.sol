@@ -10,7 +10,7 @@ import {IVeriGreen} from '../interfaces/IVeriGreen.sol';
 import { GreenEvents } from '../shared/GreenEvents.sol';
 
 
-contract WebProofVerifier is Verifier{
+contract GreenWebVerifier is Verifier{
     address public prover;
     IVeriGreen public veriGreen;
 
@@ -19,11 +19,12 @@ contract WebProofVerifier is Verifier{
         veriGreen = IVeriGreen(_veriGreen);
     }
 
-    function verify(Proof calldata, uint256 forestId, address account)
+    function verify(Proof calldata, string memory forestId, bytes memory coordinatesHash, address account)
         external
         onlyVerified(prover, GreenWebProofProver.main.selector)
     {
-        veriGreen.verifyLand(account, forestId);
+        (string memory coordinate1, string memory coordinate2, string memory coordinate3, string memory coordinate4) = abi.decode(coordinatesHash, (string, string, string, string));
+        veriGreen.verifyLand(account, forestId, coordinate1, coordinate2, coordinate3, coordinate4);
     }
 }
 
