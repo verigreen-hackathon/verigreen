@@ -1,0 +1,145 @@
+@startuml
+!theme plain
+
+' === STYLING CONFIGURATION ===
+skinparam defaultFontSize 26
+skinparam defaultFontName Arial Black
+skinparam titleFontSize 36
+skinparam titleFontStyle bold
+skinparam participantFontSize 24
+skinparam participantFontStyle bold
+skinparam arrowFontSize 22
+skinparam arrowFontStyle bold
+skinparam noteFontSize 20
+skinparam noteFontStyle bold
+
+' === SPACING & LAYOUT ===
+skinparam sequenceParticipantPadding 25
+skinparam sequenceArrowPadding 15
+skinparam sequenceGroupBodyBackgroundColor #f8f8f8
+skinparam sequenceGroupHeaderFontSize 24
+skinparam sequenceGroupHeaderFontStyle bold
+
+' === COLORS & STYLING ===
+skinparam backgroundColor white
+skinparam participant {
+    BackgroundColor #e1f5fe
+    BorderColor #0277bd
+    FontColor black
+}
+skinparam note {
+    BackgroundColor #fff3e0
+    BorderColor #f57c00
+    FontColor black
+}
+skinparam arrow {
+    Color #1565c0
+    FontColor black
+}
+
+' === USER INTERFACE ===
+participant "🌱\n**USER**" as User
+
+' === FRONTEND LAYER ===  
+participant "🖥️\n**FRONTEND**" as Frontend
+
+' === BACKEND SERVICES ===
+participant "⚡\n**BACKEND API**" as API
+participant "🛰️\n**SATELLITE**" as Sentinel
+participant "🧮\n**NDVI PROCESSOR**" as Processor
+
+' === STORAGE & VERIFICATION ===
+participant "📦\n**FILECOIN**" as Filecoin
+participant "🎲\n**PYTH ENTROPY**" as Pyth
+participant "🔐\n**ZK PROOF**\n(vLayer)" as ZK
+
+' === BLOCKCHAIN LAYER ===
+participant "⛓️\n**BLOCKCHAIN**" as Blockchain
+participant "💰\n**TOKENS**" as Tokens
+
+' ================================================================
+== 📋 **VERIFICATION REQUEST** ==
+' ================================================================
+
+User -> Frontend: **🔍 Submit Verification Request**
+note over User, Frontend #lightblue
+  **Input: Coordinates, Time Period, Forest Boundaries, Wallet Address**
+end note
+
+Frontend -> API: **📤 POST /verify/request**
+
+' ================================================================
+== 🛰️ **SATELLITE DATA PROCESSING** ==
+' ================================================================
+
+API -> Sentinel: **📡 Fetch Satellite Imagery**
+note right of Sentinel #lightgreen
+  **Sentinel Hub API - Multi-spectral bands**
+end note
+Sentinel --> API: **📊 Satellite Bands (B4, B8)**
+
+API -> Processor: **🔬 Calculate NDVI & Forest Analysis**
+note over Processor #lightyellow
+  **Mathematical NDVI calculation + Forest health metrics (No AI)**
+end note
+Processor --> API: **📈 Forest Health + Environmental Data**
+
+' ================================================================
+== 💾 **DECENTRALIZED STORAGE** ==
+' ================================================================
+
+API -> Filecoin: **🗄️ Store Verified Analysis**
+note over API, Filecoin #lightcyan
+  **Permanent Storage - JSON analysis results stored on-chain**
+end note
+Filecoin --> API: **🔗 Storage CID**
+
+' ================================================================
+== 🔐 **ZERO-KNOWLEDGE VERIFICATION** ==
+' ================================================================
+
+API -> Pyth: **🎯 Request Entropy**
+note over API, Pyth #lavender
+  **Randomness Source for ZK proof generation**
+end note
+Pyth --> API: **🎲 Random Entropy Value**
+
+API -> ZK: **⚙️ Generate Verification Proof**
+note over API, ZK #mistyrose
+  **Zero-Knowledge Proof: Data integrity + Authenticity + Privacy**
+end note
+ZK --> API: **✅ ZK Proof + Verification Key**
+
+' ================================================================
+== ⛓️ **BLOCKCHAIN RECORDING** ==
+' ================================================================
+
+API -> Blockchain: **📝 Store Verification Record**
+note over API, Blockchain #lightsteelblue
+  **Immutable Record - Permanent proof of verification on-chain**
+end note
+Blockchain --> API: **📋 Transaction Hash + Record ID**
+
+' ================================================================
+== 💰 **TOKEN REWARDS** ==
+' ================================================================
+
+alt **✅ Verification Successful**
+    API -> Tokens: **🪙 Mint/Transfer Tokens**
+    note over API, Tokens #lightgreen
+      **Environmental Rewards - Tokens awarded for verified forest data**
+    end note
+    Tokens --> API: **💎 Token Transaction Confirmed**
+    API --> Frontend: **🎉 Verification Complete + Tokens Awarded**
+    
+else **❌ Verification Failed**
+    API --> Frontend: **⚠️ Verification Failed - No Tokens**
+end
+
+' ================================================================
+== 📱 **USER RESPONSE** ==
+' ================================================================
+
+Frontend --> User: **📊 Transparent Verification Results + Rewards**
+
+@enduml 
